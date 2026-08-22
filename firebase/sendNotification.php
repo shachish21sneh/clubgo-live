@@ -1,29 +1,46 @@
 <?php
 // sendNotification.php
 
-// Load your service account credentials
-$serviceAccountFile = '/home1/a17665e9/clubgo.in/v2/firebase/clubgoapp-1619425914731-firebase-adminsdk-foydh-41460e8b32.json';
+// Resolve service account credentials path dynamically
+$serviceAccountFile = __DIR__ . '/clubgoapp-1619425914731-firebase-adminsdk-foydh-41460e8b32.json';
 if (!file_exists($serviceAccountFile)) {
-    die("Service account file not found.");
+    $jsonFiles = glob(__DIR__ . '/*firebase-adminsdk*.json');
+    if (!empty($jsonFiles)) {
+        $serviceAccountFile = $jsonFiles[0];
+    }
 }
 
-$serviceAccount = json_decode(file_get_contents($serviceAccountFile), true);
-if (json_last_error() !== JSON_ERROR_NONE) {
-    die("Error parsing service account file: " . json_last_error_msg());
+$client_email = null;
+$private_key = null;
+$project_id = 'clubgoapp-1619425914731';
+
+if (file_exists($serviceAccountFile)) {
+    $serviceAccount = json_decode(file_get_contents($serviceAccountFile), true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($serviceAccount)) {
+        $client_email = $serviceAccount['client_email'] ?? null;
+        $private_key = $serviceAccount['private_key'] ?? null;
+        if (!empty($serviceAccount['project_id'])) {
+            $project_id = $serviceAccount['project_id'];
+        }
+    } else {
+        error_log("Error parsing service account file: " . json_last_error_msg());
+    }
+} else {
+    error_log("Service account file not found in " . __DIR__);
 }
 
-$client_email = $serviceAccount['client_email'];
-$private_key = $serviceAccount['private_key'];
-$project_id = 'clubgoapp-1619425914731'; // Ensure this matches your Firebase project ID exactly
-
-// Common error logger
+// Common error logger (does not echo to stdout to prevent breaking JSON responses)
 function log_error($message) {
-    echo $message . "\n";
-    error_log($message);
+    error_log("[FCM Error] " . $message);
 }
 
 // Function to create a JWT for OAuth 2.0
 function create_jwt($client_email, $private_key) {
+    if (empty($client_email) || empty($private_key)) {
+        log_error("Missing client_email or private_key for JWT generation.");
+        return null;
+    }
+
     $header = ['alg' => 'RS256', 'typ' => 'JWT'];
 
     $now = time();
@@ -53,6 +70,10 @@ function create_jwt($client_email, $private_key) {
 
 // Function to get access token
 function get_access_token($jwt) {
+    if (empty($jwt)) {
+        return null;
+    }
+
     $url = 'https://oauth2.googleapis.com/token';
     $data = [
         'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
@@ -61,41 +82,54 @@ function get_access_token($jwt) {
 
     $options = [
         'http' => [
-            'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
-            'method'  => 'POST',
-            'content' => http_build_query($data)
+            'header'        => "Content-Type: application/x-www-form-urlencoded\r\n",
+            'method'        => 'POST',
+            'content'       => http_build_query($data),
+            'ignore_errors' => true,
+            'timeout'       => 10
         ]
     ];
 
     $context = stream_context_create($options);
-    $result  = file_get_contents($url, false, $context);
+    $result  = @file_get_contents($url, false, $context);
 
     if ($result === FALSE) {
         $error = error_get_last();
-        log_error("HTTP request failed. Error: " . $error['message']);
+        log_error("HTTP request failed. Error: " . ($error['message'] ?? 'Unknown error'));
         return null;
     }
 
     $response = json_decode($result, true);
     if (isset($response['error'])) {
-        log_error("Error getting access token: " . $response['error_description']);
+        log_error("Error getting access token: " . ($response['error_description'] ?? $response['error']));
         return null;
     }
 
-    return $response['access_token'];
+    return $response['access_token'] ?? null;
 }
 
 // Function to send FCM notification
 function send_fcm_notification($device_token, $notification) {
     global $client_email, $private_key, $project_id;
 
+    if (empty($device_token) || empty($client_email) || empty($private_key) || empty($project_id)) {
+        log_error("Missing required credentials or device token to send FCM notification.");
+        return null;
+    }
+
     // Generate JWT
     $jwt = create_jwt($client_email, $private_key);
-    if (!$jwt) return "Error generating JWT.";
+    if (!$jwt) {
+        log_error("Error generating JWT.");
+        return null;
+    }
 
     // Get access token
     $access_token = get_access_token($jwt);
-    if (!$access_token) return "Error getting access token.";
+    if (!$access_token) {
+        log_error("Error getting access token.");
+        return null;
+    }
 
     $url = "https://fcm.googleapis.com/v1/projects/{$project_id}/messages:send";
     $data = [
@@ -107,18 +141,20 @@ function send_fcm_notification($device_token, $notification) {
 
     $options = [
         'http' => [
-            'header'  => "Authorization: Bearer {$access_token}\r\nContent-Type: application/json\r\n",
-            'method'  => 'POST',
-            'content' => json_encode($data)
+            'header'        => "Authorization: Bearer {$access_token}\r\nContent-Type: application/json\r\n",
+            'method'        => 'POST',
+            'content'       => json_encode($data),
+            'ignore_errors' => true,
+            'timeout'       => 10
         ]
     ];
 
     $context = stream_context_create($options);
-    $result  = file_get_contents($url, false, $context);
+    $result  = @file_get_contents($url, false, $context);
 
     if ($result === FALSE) {
         $error = error_get_last();
-        log_error("HTTP request failed. Error: " . $error['message']);
+        log_error("HTTP request failed. Error: " . ($error['message'] ?? 'Unknown error'));
         return null;
     }
 

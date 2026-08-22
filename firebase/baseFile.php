@@ -1,6 +1,5 @@
 <?php
-// baseFile.php
-require_once 'sendNotification.php';
+require_once __DIR__ . '/sendNotification.php';
 
 /**
  * Base function to send notification

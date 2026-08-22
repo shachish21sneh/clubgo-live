@@ -2,9 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
-ini_set('log_errors', 1);
-
-require dirname(dirname(__FILE__)) . '/v2/include/eventconfig.php';
+require __DIR__ . '/include/eventconfig.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
