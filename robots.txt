@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: http://event.ajath.com/sitemap.xml
