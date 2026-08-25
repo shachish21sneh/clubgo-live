@@ -16,7 +16,7 @@ if (isset($_POST['type'])) {
 			$_SESSION['eventname'] = $username;
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Login Successfully!", "message" => "welcome admin!!", "action" => "dashboard.php");
 		} else {
-			$returnArr = array("ResponseCode" => "200", "Result" => "false", "title" => "Please Use Valid Data!!", "message" => "Invalid Data!!", "action" => "index.php");
+			$returnArr = array("ResponseCode" => "200", "Result" => "false", "title" => "Please Use Valid Data!!", "message" => "Invalid Data!!", "action" => "admin.php");
 		}
 	} else if ($_POST['type'] == 'add_code') {
 		$okey = $_POST['status'];
