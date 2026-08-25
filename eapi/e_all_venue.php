@@ -1,14 +1,11 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-ini_set('log_errors', 1);
+ini_set('display_errors', 0);
 
 require dirname(dirname(__FILE__)) . '/include/eventconfig.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $data = json_decode(file_get_contents('php://input'), true);
-
 $uid = isset($data['uid']) ? intval($data['uid']) : 0;
 
 if ($uid <= 0) {
@@ -20,132 +17,112 @@ if ($uid <= 0) {
     exit;
 }
 
-$v = [];
-
-$query = "
-    SELECT v.*, c.name AS cityName, 
-           GROUP_CONCAT(DISTINCT CONCAT(cu.id, ':', cu.name)) AS cuisines, 
-           GROUP_CONCAT(DISTINCT CONCAT(f.id, ':', f.name)) AS facilities, 
-           GROUP_CONCAT(DISTINCT CONCAT(k.id, ':', k.name)) AS known_for
-    FROM tbl_veneu v
-    LEFT JOIN tbl_city c ON v.loc_city_id = c.id
-    LEFT JOIN tbl_cuisines cu ON FIND_IN_SET(cu.id, v.loc_cuisines_id)
-    LEFT JOIN tbl_facilities f ON FIND_IN_SET(f.id, v.loc_facilities_id)
-    LEFT JOIN tbl_known_for k ON FIND_IN_SET(k.id, v.loc_known_for)
-    WHERE v.loc_status = 'A'
-    GROUP BY v.loc_id
-    ORDER BY v.loc_id DESC
-";
-
-$venuelist = $event->query($query);
-
-if (!$venuelist) {
-    echo json_encode([
-        "ResponseCode" => "500",
-        "Result" => "false",
-        "ResponseMsg" => "Query Failed: " . $event->error
-    ]);
-    exit;
+// 1. Pre-load taxonomy dictionaries
+$cuisinesMap = [];
+$cuRes = $event->query("SELECT id, name FROM tbl_cuisines");
+if ($cuRes) {
+    while ($r = $cuRes->fetch_assoc()) $cuisinesMap[(int)$r['id']] = $r['name'];
 }
 
-while ($venue = $venuelist->fetch_assoc()) {
-    // Bookmark check
-    $bookmarkRes = $event->query("SELECT id FROM tbl_fav_venue WHERE uid = {$uid} AND vid = " . (int)$venue['loc_id']);
-    $isBookmark = $bookmarkRes ? $bookmarkRes->num_rows : 0;
+$facilitiesMap = [];
+$faRes = $event->query("SELECT id, name FROM tbl_facilities");
+if ($faRes) {
+    while ($r = $faRes->fetch_assoc()) $facilitiesMap[(int)$r['id']] = $r['name'];
+}
 
-    $nav = [
-        "venue_id" => $venue['loc_id'],
-        "venue_title" => $venue['loc_title'],
-        "venue_image" => $venue['loc_image'],
-        "venue_description" => $venue['loc_description'],
-        "venue_address" => $venue['loc_customer_headlines'],
-        "venue_category" => $venue['loc_category_id'],
-        "venue_days" => $venue['loc_days'],
-        "venue_start_time" => $venue['loc_start_time'],
-        "venue_end_time" => $venue['loc_end_time'],
-        "cityName" => $venue['cityName'],
-        "IS_BOOKMARK" => $isBookmark
-    ];
+$knownForMap = [];
+$knRes = $event->query("SELECT id, name FROM tbl_known_for");
+if ($knRes) {
+    while ($r = $knRes->fetch_assoc()) $knownForMap[(int)$r['id']] = $r['name'];
+}
 
-    // Safely split cuisines
-    $nav['cuisines'] = [];
-    if (!empty($venue['cuisines'])) {
-        foreach (explode(',', $venue['cuisines']) as $item) {
-            if (strpos($item, ':') !== false) {
-                list($id, $name) = explode(':', $item, 2);
-                $nav['cuisines'][] = ["id" => (int)$id, "name" => $name];
+// 2. Pre-load user bookmarks
+$favVenueMap = [];
+if ($uid > 0) {
+    $fvRes = $event->query("SELECT vid FROM tbl_fav_venue WHERE uid=$uid");
+    if ($fvRes) {
+        while ($r = $fvRes->fetch_assoc()) $favVenueMap[(int)$r['vid']] = 1;
+    }
+}
+
+// 3. Fast indexed query
+$query = "SELECT v.*, c.name AS cityName 
+          FROM tbl_veneu v 
+          LEFT JOIN tbl_city c ON v.loc_city_id = c.id 
+          WHERE v.loc_status = 'A' 
+          ORDER BY v.loc_id DESC";
+
+$venuelist = $event->query($query);
+$v = [];
+
+if ($venuelist) {
+    while ($venue = $venuelist->fetch_assoc()) {
+        $vid = (int)$venue['loc_id'];
+        
+        // Split cuisines
+        $cList = [];
+        if (!empty($venue['loc_cuisines_id'])) {
+            foreach (explode(',', $venue['loc_cuisines_id']) as $cId) {
+                $cId = (int)trim($cId);
+                if (isset($cuisinesMap[$cId])) {
+                    $cList[] = ["id" => $cId, "name" => $cuisinesMap[$cId]];
+                }
             }
         }
-    }
 
-    // Safely split facilities
-    $nav['facilities'] = [];
-    if (!empty($venue['facilities'])) {
-        foreach (explode(',', $venue['facilities']) as $item) {
-            if (strpos($item, ':') !== false) {
-                list($id, $name) = explode(':', $item, 2);
-                $nav['facilities'][] = ["id" => (int)$id, "name" => $name];
+        // Split facilities
+        $fList = [];
+        if (!empty($venue['loc_facilities_id'])) {
+            foreach (explode(',', $venue['loc_facilities_id']) as $fId) {
+                $fId = (int)trim($fId);
+                if (isset($facilitiesMap[$fId])) {
+                    $fList[] = ["id" => $fId, "name" => $facilitiesMap[$fId]];
+                }
             }
         }
-    }
 
-    // Safely split known_for
-    $nav['known_for'] = [];
-    if (!empty($venue['known_for'])) {
-        foreach (explode(',', $venue['known_for']) as $item) {
-            if (strpos($item, ':') !== false) {
-                list($id, $name) = explode(':', $item, 2);
-                $nav['known_for'][] = ["id" => (int)$id, "name" => $name];
+        // Split known_for
+        $kList = [];
+        if (!empty($venue['loc_known_for'])) {
+            foreach (explode(',', $venue['loc_known_for']) as $kId) {
+                $kId = (int)trim($kId);
+                if (isset($knownForMap[$kId])) {
+                    $kList[] = ["id" => $kId, "name" => $knownForMap[$kId]];
+                }
             }
         }
-    }
 
-    $v[] = $nav;
-	//print_r($v);
+        $v[] = [
+            "venue_id"          => $venue['loc_id'],
+            "venue_title"       => $venue['loc_title'],
+            "venue_image"       => $venue['loc_image'],
+            "venue_description" => $venue['loc_description'],
+            "venue_address"     => $venue['loc_customer_headlines'],
+            "venue_category"    => $venue['loc_category_id'],
+            "venue_days"        => $venue['loc_days'],
+            "venue_start_time"  => $venue['loc_start_time'],
+            "venue_end_time"    => $venue['loc_end_time'],
+            "cityName"          => $venue['cityName'] ?? '',
+            "IS_BOOKMARK"       => isset($favVenueMap[$vid]) ? 1 : 0,
+            "cuisines"          => $cList,
+            "facilities"        => $fList,
+            "known_for"         => $kList
+        ];
+    }
 }
 
 if (empty($v)) {
-    // Ensure UTF-8 safe
-array_walk_recursive($v, function (&$item) {
-    if (is_string($item)) {
-        $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
-    }
-});
-
-$json = json_encode([
-    "ResponseCode" => "400",
-    "Result" => "true",
-    "ResponseMsg" => "Venue List not found!",
-    "SearchData" => $v
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-if ($json === false) {
-    echo "JSON Encode Error: " . json_last_error_msg();
+    echo json_encode([
+        "ResponseCode" => "400",
+        "Result"       => "true",
+        "ResponseMsg"  => "Venue List not found!",
+        "SearchData"   => []
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } else {
-    header('Content-Type: application/json; charset=utf-8');
-    echo $json;
-}
-
-} else {
-	// Ensure UTF-8 safe
-array_walk_recursive($v, function (&$item) {
-    if (is_string($item)) {
-        $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
-    }
-});
-
-$json = json_encode([
-    "ResponseCode" => "200",
-    "Result" => "true",
-    "ResponseMsg" => "Venue List Retrieved Successfully!",
-    "SearchData" => $v
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-if ($json === false) {
-    echo "JSON Encode Error: " . json_last_error_msg();
-} else {
-    header('Content-Type: application/json; charset=utf-8');
-    echo $json;
-}
-
+    echo json_encode([
+        "ResponseCode" => "200",
+        "Result"       => "true",
+        "ResponseMsg"  => "Venue List Retrieved Successfully!",
+        "SearchData"   => $v
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }

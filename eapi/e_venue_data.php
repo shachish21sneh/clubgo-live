@@ -1,211 +1,193 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 require dirname(dirname(__FILE__)) . '/include/eventconfig.php';
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
 $data = json_decode(file_get_contents('php://input'), true);
 
-$loc_id = isset($data['loc_id']) ? intval($data['loc_id']) : null;
-$uid = $data['uid'];
-$query = "SELECT v.*, 
-                 c.name as cityName, 
-                 GROUP_CONCAT(DISTINCT CONCAT(cu.id, ':', cu.name)) AS cuisines, 
-                 GROUP_CONCAT(DISTINCT CONCAT(f.id, ':', f.name)) AS facilities, 
-                 GROUP_CONCAT(DISTINCT CONCAT(k.id, ':', k.name)) AS known_for,
-                 GROUP_CONCAT(DISTINCT CONCAT(p.id, ':', p.name)) AS pakages,
-                 GROUP_CONCAT(DISTINCT CONCAT(ve.loc_id, '|', ve.loc_title, '|', ve.loc_image, '|', ve.loc_city_id) SEPARATOR '||') AS similarvenue 
-          FROM tbl_veneu v
-          LEFT JOIN tbl_city c ON v.loc_city_id = c.id
-          LEFT JOIN tbl_cuisines cu ON FIND_IN_SET(cu.id, v.loc_cuisines_id)
-          LEFT JOIN tbl_facilities f ON FIND_IN_SET(f.id, v.loc_facilities_id)
-          LEFT JOIN tbl_known_for k ON FIND_IN_SET(k.id, v.loc_known_for)
-          LEFT JOIN tbl_package_items p ON FIND_IN_SET(p.id, v.loc_package_id)
-          LEFT JOIN tbl_veneu ve ON FIND_IN_SET(ve.loc_id, COALESCE(NULLIF(v.loc_similer_venue, ''), '0'))  
-                                 AND ve.loc_status = 'A'
-          WHERE v.loc_status = 'A'";
+$loc_id = isset($data['loc_id']) ? intval($data['loc_id']) : 0;
+$uid = isset($data['uid']) ? intval($data['uid']) : 0;
 
-
-if ($loc_id !== null) {
-    $query .= " AND v.loc_id = ?";
+if ($loc_id <= 0) {
+    echo json_encode(["ResponseCode" => "400", "Result" => "false", "ResponseMsg" => "Venue ID is required"]);
+    exit;
 }
 
-$query .= " GROUP BY v.loc_id";
+// 1. Fetch Venue Record
+$stmt = $event->prepare("SELECT v.*, c.name AS cityName FROM tbl_veneu v LEFT JOIN tbl_city c ON v.loc_city_id = c.id WHERE v.loc_id = ? AND v.loc_status = 'A' LIMIT 1");
+$stmt->bind_param("i", $loc_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-$stmt = $event->prepare($query);
-
-if ($loc_id !== null) {
-    $stmt->bind_param("i", $loc_id);
+if (!$result || $result->num_rows === 0) {
+    echo json_encode(["ResponseCode" => "404", "Result" => "false", "ResponseMsg" => "No data found"]);
+    exit;
 }
-if ($stmt->execute()) {
-    $result = $stmt->get_result();
-    $venues = [];
 
-    while ($row = $result->fetch_assoc()) {
-        $date = date_create($row['loc_from_date']);
-        $dateend = date_create($row['loc_to_date']);
-        $row['loc_days_to'] = date_format($date, "l") . ' TO ' . date_format($dateend, "l");
-        $row['loc_time_day'] = date_format($date, "l") . ',' . date("g:i A", strtotime($row['loc_start_time'])) . ' TO ' . date_format($dateend, "l") . ',' . date("g:i A", strtotime($row['loc_end_time']));
+$row = $result->fetch_assoc();
 
-        // Convert 'id:name' strings into associative arrays
-        $row['cuisines'] = !empty($row['cuisines']) ? array_map(function ($item) {
-            list($id, $name) = explode(':', $item);
-            return ["id" => (int) $id, "name" => $name];
-        }, explode(',', $row['cuisines'])) : [];
+// 2. Pre-load taxonomy maps
+$cuisinesMap = [];
+$cuRes = $event->query("SELECT id, name FROM tbl_cuisines");
+if ($cuRes) while ($r = $cuRes->fetch_assoc()) $cuisinesMap[(int)$r['id']] = $r['name'];
 
-        $row['facilities'] = !empty($row['facilities']) ? array_map(function ($item) {
-            list($id, $name) = explode(':', $item);
-            return ["id" => (int) $id, "name" => $name];
-        }, explode(',', $row['facilities'])) : [];
+$facilitiesMap = [];
+$faRes = $event->query("SELECT id, name FROM tbl_facilities");
+if ($faRes) while ($r = $faRes->fetch_assoc()) $facilitiesMap[(int)$r['id']] = $r['name'];
 
-        $row['known_for'] = !empty($row['known_for']) ? array_map(function ($item) {
-            list($id, $name) = explode(':', $item);
-            return ["id" => (int) $id, "name" => $name];
-        }, explode(',', $row['known_for'])) : [];
+$knownForMap = [];
+$knRes = $event->query("SELECT id, name FROM tbl_known_for");
+if ($knRes) while ($r = $knRes->fetch_assoc()) $knownForMap[(int)$r['id']] = $r['name'];
 
-		$row['pakages'] = !empty($row['pakages'])
-		? array_values(array_filter(array_map(function ($item) {
-		$parts = explode(':', $item, 2);
-		// if not valid "id:name" format, skip it
-		if (count($parts) < 2) {
-			return null;
-		}
-		return [
-			"id"   => (int) $parts[0],
-			"name" => $parts[1]
-		];
-		}, explode(',', $row['pakages']))))
-		: [];
+$packagesMap = [];
+$pkRes = $event->query("SELECT id, name FROM tbl_package_items");
+if ($pkRes) while ($r = $pkRes->fetch_assoc()) $packagesMap[(int)$r['id']] = $r['name'];
 
-        $row['similarvenue'] = !empty($row['similarvenue']) ? array_map(function ($item) use ($event) {
-            $parts = explode('|', $item, 4); // Limit to 3 parts
+$catMap = [];
+$catRes = $event->query("SELECT id, title FROM tbl_cat");
+if ($catRes) while ($r = $catRes->fetch_assoc()) $catMap[(int)$r['id']] = $r['title'];
 
-            $cityname = $event->query("SELECT `name` FROM `tbl_city` WHERE id=" . $parts[3] . "")->fetch_assoc();
-            $events_count = $event->query("SELECT count(*) as eventscount FROM `tbl_event` WHERE loc_id=" . $parts[0] . "")->fetch_assoc();
-
-            return [
-                "id" => (int) $parts[0],
-                "name" => $parts[1],
-                "loc_image" => $parts[2],
-                "eventcount" => (int) $events_count["eventscount"],
-                "city" => $cityname["name"],
-                "rating" => 5.0
-            ];
-        }, explode('||', $row['similarvenue'])) : [];
-
-
-
-        $sql = "SELECT * FROM tbl_event WHERE status = 1 AND loc_id=" . $row['loc_id'] . "";
-        $result = $event->query($sql);
-        $se = []; // initialize array
-
-        while ($rownew = $result->fetch_assoc()) {
-            $navn = []; // reset for each event
-
-            $navn['event_id'] = $rownew['id'];
-            $navn['event_title'] = $rownew['title'];
-            $navn['event_img'] = $rownew['img'];
-
-            $navn['event_sdate'] = date("d M", strtotime($rownew['sdate']));
-            $navn['event_time'] = date("h:i A", strtotime($rownew['stime']));
-
-            $navn['event_address'] = $rownew['address'];
-            $navn['payment_type'] = $rownew['payment_type'];
-
-
-
-            $cidList = $rownew['cid']; // e.g., "1,2,3"
-            $cidArray = explode(',', $cidList); // ['1', '2', '3']
-
-            // Sanitize and prepare for SQL
-            $cidArray = array_map('intval', $cidArray); // avoid SQL injection
-            $cidString = implode(',', $cidArray); // "1,2,3"
-
-            $result1 = $event->query("SELECT title FROM tbl_cat WHERE id IN ($cidString)");
-
-            $titles = [];
-            while ($cat = $result1->fetch_assoc()) {
-                $titles[] = $cat['title'];
-            }
-
-            //  $cat = $event->query("SELECT title FROM tbl_cat WHERE id = ".$rownew['cid'])->fetch_assoc();
-            //$navn['category'] = $cat['title'] ?? '';
-            $navn['category'] = $titles;
-
-
-
-
-            $is_bookmark = $event->query("SELECT id FROM tbl_fav WHERE uid = $uid AND eid = " . $rownew['id'])->num_rows;
-            $navn['IS_BOOKMARK'] = $is_bookmark;
-
-            // Get member profile pictures
-            $ulistn = $event->query("SELECT uid FROM tbl_ticket WHERE eid = " . $rownew['id'] . " GROUP BY uid");
-            $member = [];
-            while ($rpn = $ulistn->fetch_assoc()) {
-                $getpic = $event->query("SELECT pro_pic FROM tbl_user WHERE id = " . $rpn['uid'])->fetch_assoc();
-                if (!empty($getpic['pro_pic'])) {
-                    $member[] = $getpic['pro_pic'];
-                }
-            }
-            $navn['member_list'] = $member;
-
-            $ticket = $event->query("SELECT SUM(ticket_book) as books FROM tbl_type_price WHERE eid = " . $rownew['id'])->fetch_assoc();
-            $navn['total_member_list'] = $ticket['books'] ?? 0;
-
-            $se[] = $navn;
-        }
-
-        $g = [];
-        $gal = $event->query("select * from tbl_venue_gallery where vid=" . $row['loc_id'] . " and status=1");
-        while ($row1 = $gal->fetch_assoc()) {
-            $g[] = $row1['img'];
-        }
-
-
-
-        $mrows = $event->query("SELECT 
-vm.id,
-vm.vid,
-vm.menu_cat_id,
-mc.title AS menu_category_title,
-vm.img,
-vm.status
-FROM 
-tbl_venue_menu vm
-JOIN 
-menu_category mc ON vm.menu_cat_id = mc.id and vm.vid=" . $row['loc_id'] . " and vm.status=1");
-        $menu = array();
-        $me = [];
-        while ($row2 = $mrows->fetch_assoc()) {
-            $menu['menu_id'] = $row2['id'];
-            $menu['menu_img'] = $row2['img'];
-            $menu['menu_title'] = $row2['menu_category_title'];
-            //$menu['sponsore_title'] = $row['title'];
-            $me[] = $menu;
-        }
-
-
-
-        $row['similar_events'] = $se;
-        $row['gallery'] = $g;
-        $row['menu'] = $me;
-        $venues[] = $row;
-    }
-
-    if (!empty($venues)) {
-        echo json_encode([
-            "ResponseCode" => "200",
-            "Result" => "true",
-            "ResponseMsg" => "Data fetched successfully",
-            "venues" => $venues
-        ]);
-    } else {
-        echo json_encode([
-            "ResponseCode" => "404",
-            "Result" => "false",
-            "ResponseMsg" => "No data found"
-        ]);
+// Map taxonomy
+$cList = [];
+if (!empty($row['loc_cuisines_id'])) {
+    foreach (explode(',', $row['loc_cuisines_id']) as $cId) {
+        $cId = (int)trim($cId);
+        if (isset($cuisinesMap[$cId])) $cList[] = ["id" => $cId, "name" => $cuisinesMap[$cId]];
     }
 }
+$row['cuisines'] = $cList;
 
-?>
+$fList = [];
+if (!empty($row['loc_facilities_id'])) {
+    foreach (explode(',', $row['loc_facilities_id']) as $fId) {
+        $fId = (int)trim($fId);
+        if (isset($facilitiesMap[$fId])) $fList[] = ["id" => $fId, "name" => $facilitiesMap[$fId]];
+    }
+}
+$row['facilities'] = $fList;
+
+$kList = [];
+if (!empty($row['loc_known_for'])) {
+    foreach (explode(',', $row['loc_known_for']) as $kId) {
+        $kId = (int)trim($kId);
+        if (isset($knownForMap[$kId])) $kList[] = ["id" => $kId, "name" => $knownForMap[$kId]];
+    }
+}
+$row['known_for'] = $kList;
+
+$pList = [];
+if (!empty($row['loc_package_id'])) {
+    foreach (explode(',', $row['loc_package_id']) as $pId) {
+        $pId = (int)trim($pId);
+        if (isset($packagesMap[$pId])) $pList[] = ["id" => $pId, "name" => $packagesMap[$pId]];
+    }
+}
+$row['pakages'] = $pList;
+
+// Format Dates
+$date = date_create($row['loc_from_date']);
+$dateend = date_create($row['loc_to_date']);
+$row['loc_days_to'] = ($date && $dateend) ? (date_format($date, "l") . ' TO ' . date_format($dateend, "l")) : '';
+$row['loc_time_day'] = ($date && $dateend) ? (date_format($date, "l") . ',' . date("g:i A", strtotime($row['loc_start_time'])) . ' TO ' . date_format($dateend, "l") . ',' . date("g:i A", strtotime($row['loc_end_time']))) : '';
+
+// 3. Similar Venues
+$similarVenues = [];
+if (!empty($row['loc_similer_venue'])) {
+    $sIds = array_map('intval', explode(',', $row['loc_similer_venue']));
+    $sIdString = implode(',', array_filter($sIds));
+    if (!empty($sIdString)) {
+        $svRes = $event->query("SELECT v.loc_id, v.loc_title, v.loc_image, c.name AS city 
+                                FROM tbl_veneu v 
+                                LEFT JOIN tbl_city c ON v.loc_city_id = c.id 
+                                WHERE v.loc_id IN ($sIdString) AND v.loc_status = 'A'");
+        if ($svRes) {
+            while ($sv = $svRes->fetch_assoc()) {
+                $similarVenues[] = [
+                    "id"         => (int)$sv['loc_id'],
+                    "name"       => $sv['loc_title'],
+                    "loc_image"  => $sv['loc_image'],
+                    "eventcount" => 0,
+                    "city"       => $sv['city'] ?? '',
+                    "rating"     => 5.0
+                ];
+            }
+        }
+    }
+}
+$row['similarvenue'] = $similarVenues;
+
+// 4. Hosted Events at Venue
+$se = [];
+$evResult = $event->query("SELECT id, title, img, sdate, stime, address, payment_type, cid FROM tbl_event WHERE loc_id = $loc_id AND status = 1 ORDER BY sdate ASC LIMIT 10");
+if ($evResult && $evResult->num_rows > 0) {
+    // User bookmarks
+    $userBookmarks = [];
+    if ($uid > 0) {
+        $favRes = $event->query("SELECT eid FROM tbl_fav WHERE uid=$uid");
+        if ($favRes) while ($fr = $favRes->fetch_assoc()) $userBookmarks[(int)$fr['eid']] = 1;
+    }
+
+    while ($rownew = $evResult->fetch_assoc()) {
+        $eid = (int)$rownew['id'];
+        $cTitles = [];
+        if (!empty($rownew['cid'])) {
+            foreach (explode(',', $rownew['cid']) as $catId) {
+                $catId = (int)trim($catId);
+                if (isset($catMap[$catId])) $cTitles[] = $catMap[$catId];
+            }
+        }
+
+        // Tickets & Avatars
+        $mRes = $event->query("SELECT u.pro_pic FROM tbl_ticket t JOIN tbl_user u ON t.uid=u.id WHERE t.eid=$eid AND u.pro_pic IS NOT NULL AND u.pro_pic != '' GROUP BY t.uid LIMIT 3");
+        $members = [];
+        if ($mRes) while ($mr = $mRes->fetch_assoc()) $members[] = $mr['pro_pic'];
+
+        $ticket = $event->query("SELECT SUM(ticket_book) as books FROM tbl_type_price WHERE eid = $eid")->fetch_assoc();
+
+        $se[] = [
+            'event_id'          => (string)$eid,
+            'event_title'       => $rownew['title'],
+            'event_img'         => $rownew['img'],
+            'event_sdate'       => date("d M", strtotime($rownew['sdate'])),
+            'event_time'        => date("h:i A", strtotime($rownew['stime'])),
+            'event_address'     => $rownew['address'],
+            'payment_type'      => $rownew['payment_type'],
+            'category'          => $cTitles,
+            'IS_BOOKMARK'       => isset($userBookmarks[$eid]) ? 1 : 0,
+            'member_list'       => $members,
+            'total_member_list' => (int)($ticket['books'] ?? 0)
+        ];
+    }
+}
+$row['similar_events'] = $se;
+
+// 5. Venue Gallery
+$g = [];
+$gal = $event->query("SELECT img FROM tbl_venue_gallery WHERE vid = $loc_id AND status = 1");
+if ($gal) while ($row1 = $gal->fetch_assoc()) $g[] = $row1['img'];
+$row['gallery'] = $g;
+
+// 6. Venue Menu
+$me = [];
+$mrows = $event->query("SELECT vm.id, vm.img, mc.title AS menu_category_title 
+                        FROM tbl_venue_menu vm 
+                        JOIN menu_category mc ON vm.menu_cat_id = mc.id 
+                        WHERE vm.vid = $loc_id AND vm.status = 1");
+if ($mrows) {
+    while ($row2 = $mrows->fetch_assoc()) {
+        $me[] = [
+            'menu_id'    => $row2['id'],
+            'menu_img'   => $row2['img'],
+            'menu_title' => $row2['menu_category_title']
+        ];
+    }
+}
+$row['menu'] = $me;
+
+echo json_encode([
+    "ResponseCode" => "200",
+    "Result"       => "true",
+    "ResponseMsg"  => "Data fetched successfully",
+    "venues"       => [$row]
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

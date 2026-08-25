@@ -1,69 +1,99 @@
 <?php 
 require dirname( dirname(__FILE__) ).'/include/eventconfig.php';
-header('Content-type: text/json');
+header('Content-Type: application/json; charset=utf-8');
+
 $data = json_decode(file_get_contents('php://input'), true);
-$uid = $data['uid'];
-$title = $data['title'];
-if($uid == '' or $title == '')
-{
-	$returnArr = array("ResponseCode"=>"401","Result"=>"false","ResponseMsg"=>"Something Went wrong  try again !");
-}
-else 
-{
-	$v = array();
-	
+$uid = isset($data['uid']) ? (int)$data['uid'] : 0;
+$title = isset($data['title']) ? trim($data['title']) : '';
 
-
-$eventlist = $event->query("select * from tbl_event where status=1 and title COLLATE utf8_general_ci like '%".$title."%' order by id desc");
-$nav = array();
-while($ev = $eventlist->fetch_assoc())
-{
-	$nav['event_id'] = $ev['id'];
-	$nav['event_title'] = $ev['title'];
-	$nav['event_img'] = $ev['img'];
-	$date=date_create($ev['sdate']);
-	$nav['event_sdate'] = date_format($date,"d F");
-	$nav['event_address'] = $ev['address'];
-	$nav['IS_BOOKMARK'] = $event->query("select * from tbl_fav where uid=".$uid." and eid=".$ev['id']."")->num_rows;
-	$spon = $event->query("select * from tbl_sponsore where eid=".$ev['id']." and status=1");
-$sponsore = array();
-$s = array();
-while($row = $spon->fetch_assoc())
-{
-	$sponsore['sponsore_id'] = $row['id'];
-	$sponsore['sponsore_img'] = $row['img'];
-	$sponsore['sponsore_title'] = $row['title'];
-	$s[] = $sponsore;
-}
-$nav['sponsore_list'] = $s[0];
-$ulist = $event->query("SELECT uid,eid FROM `tbl_ticket` WHERE `eid` = ".$ev['id']." GROUP BY uid");
-$member = array();
-while($rp = $ulist->fetch_assoc())
-{
-	$getpic = $event->query("select * from tbl_user where id=".$rp['uid']."")->fetch_assoc();
-	if($getpic['pro_pic'] == '')
-	{
-	}
-	else 
-	{
-	$member[] = $getpic['pro_pic'];
-	}
-}
-$nav['member_list'] = $member;
-$ticket = $event->query("SELECT sum(`ticket_book`) as books FROM `tbl_type_price` WHERE eid=".$ev['id']."")->fetch_assoc();
-$nav['total_member_list'] = $ticket['books'];
-	$v[] = $nav;
-	
+if (empty($title)) {
+    echo json_encode(["ResponseCode" => "401", "Result" => "false", "ResponseMsg" => "Search query is required!"]);
+    exit;
 }
 
-if(empty($v))
-{
-	$returnArr = array("ResponseCode"=>"401","Result"=>"false","ResponseMsg"=>"Search Data Not Get!!","SearchData"=>$v);
-}
-else 
-{
-$returnArr = array("ResponseCode"=>"200","Result"=>"true","ResponseMsg"=>"Search Data Get Successfully!","SearchData"=>$v);
+$escaped = $event->real_escape_string($title);
+$eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address FROM tbl_event WHERE status=1 AND title LIKE '%$escaped%' ORDER BY id DESC LIMIT 50");
+
+$v = [];
+if ($eventlist && $eventlist->num_rows > 0) {
+    // Pre-fetch bookmarks for this user
+    $userBookmarks = [];
+    if ($uid > 0) {
+        $favRes = $event->query("SELECT eid FROM tbl_fav WHERE uid=$uid");
+        if ($favRes) {
+            while ($fr = $favRes->fetch_assoc()) {
+                $userBookmarks[(int)$fr['eid']] = 1;
+            }
+        }
+    }
+
+    // Collect event IDs
+    $eids = [];
+    $rawEvents = [];
+    while ($ev = $eventlist->fetch_assoc()) {
+        $rawEvents[] = $ev;
+        $eids[] = (int)$ev['id'];
+    }
+
+    $eidString = implode(',', $eids);
+
+    // Pre-fetch Sponsors
+    $sponsorMap = [];
+    if (!empty($eidString)) {
+        $sRes = $event->query("SELECT id, eid, img, title FROM tbl_sponsore WHERE status=1 AND eid IN ($eidString) ORDER BY id ASC");
+        if ($sRes) {
+            while ($sr = $sRes->fetch_assoc()) {
+                $eIdKey = (int)$sr['eid'];
+                if (!isset($sponsorMap[$eIdKey])) {
+                    $sponsorMap[$eIdKey] = [
+                        'sponsore_id'    => $sr['id'],
+                        'sponsore_img'   => $sr['img'],
+                        'sponsore_title' => $sr['title']
+                    ];
+                }
+            }
+        }
+
+        // Pre-fetch member avatars
+        $membersMap = [];
+        $mRes = $event->query("SELECT t.eid, u.pro_pic FROM tbl_ticket t JOIN tbl_user u ON t.uid=u.id WHERE t.eid IN ($eidString) AND u.pro_pic IS NOT NULL AND u.pro_pic != '' GROUP BY t.eid, t.uid");
+        if ($mRes) {
+            while ($mr = $mRes->fetch_assoc()) {
+                $eIdKey = (int)$mr['eid'];
+                if (!isset($membersMap[$eIdKey])) $membersMap[$eIdKey] = [];
+                if (count($membersMap[$eIdKey]) < 5) $membersMap[$eIdKey][] = $mr['pro_pic'];
+            }
+        }
+
+        // Pre-fetch ticket counts
+        $ticketsMap = [];
+        $tRes = $event->query("SELECT eid, SUM(ticket_book) AS books FROM tbl_type_price WHERE eid IN ($eidString) GROUP BY eid");
+        if ($tRes) {
+            while ($tr = $tRes->fetch_assoc()) {
+                $ticketsMap[(int)$tr['eid']] = (string)($tr['books'] ?? 0);
+            }
+        }
+    }
+
+    foreach ($rawEvents as $ev) {
+        $eid = (int)$ev['id'];
+        $date = date_create($ev['sdate']);
+        $v[] = [
+            'event_id'          => (string)$eid,
+            'event_title'       => $ev['title'],
+            'event_img'         => $ev['cover_img'] ?: $ev['img'],
+            'event_sdate'       => $date ? date_format($date, "d F") : '',
+            'event_address'     => $ev['address'] ?? '',
+            'IS_BOOKMARK'       => isset($userBookmarks[$eid]) ? 1 : 0,
+            'sponsore_list'     => $sponsorMap[$eid] ?? (object)[],
+            'member_list'       => $membersMap[$eid] ?? [],
+            'total_member_list' => $ticketsMap[$eid] ?? "0"
+        ];
+    }
 }
 
+if (empty($v)) {
+    echo json_encode(["ResponseCode" => "401", "Result" => "false", "ResponseMsg" => "Search Data Not Get!!", "SearchData" => []]);
+} else {
+    echo json_encode(["ResponseCode" => "200", "Result" => "true", "ResponseMsg" => "Search Data Get Successfully!", "SearchData" => $v]);
 }
-echo json_encode($returnArr);

@@ -52,32 +52,52 @@ $sql .= " ORDER BY sdate ASC, id DESC LIMIT 50";
 
 $eventsResult = $event->query($sql);
 $eventsList = [];
-if ($eventsResult) {
+
+if ($eventsResult && $eventsResult->num_rows > 0) {
+    $rawEvents = [];
+    $eids = [];
     while ($ev = $eventsResult->fetch_assoc()) {
+        $rawEvents[] = $ev;
+        $eids[] = (int)$ev['id'];
+    }
+
+    $eidString = implode(',', $eids);
+
+    // 1. Batch user bookmarks
+    $userBookmarks = [];
+    if ($currentUid > 0) {
+        $favRes = $event->query("SELECT eid FROM tbl_fav WHERE uid=$currentUid");
+        if ($favRes) while ($fr = $favRes->fetch_assoc()) $userBookmarks[(int)$fr['eid']] = true;
+    }
+
+    // 2. Batch prices
+    $pricesMap = [];
+    $pRes = $event->query("SELECT eid, price, couple_price, female_price, male_price FROM tbl_type_price WHERE eid IN ($eidString) ORDER BY price ASC");
+    if ($pRes) {
+        while ($pr = $pRes->fetch_assoc()) {
+            $eIdKey = (int)$pr['eid'];
+            if (!isset($pricesMap[$eIdKey])) {
+                $prices = array_filter([(float)$pr['price'], (float)$pr['couple_price'], (float)$pr['female_price'], (float)$pr['male_price']], function($p) { return $p > 0; });
+                $pricesMap[$eIdKey] = !empty($prices) ? min($prices) : 0;
+            }
+        }
+    }
+
+    // 3. Batch total tickets
+    $totalMap = [];
+    $totRes = $event->query("SELECT eid, SUM(ticket_book) as total FROM tbl_type_price WHERE eid IN ($eidString) GROUP BY eid");
+    if ($totRes) {
+        while ($tr = $totRes->fetch_assoc()) {
+            $totalMap[(int)$tr['eid']] = (int)($tr['total'] ?? 0);
+        }
+    }
+
+    foreach ($rawEvents as $ev) {
         $eid = (int)$ev['id'];
-        
-        // Price
-        $pRow = $event->query("SELECT price, couple_price, female_price, male_price FROM tbl_type_price WHERE eid=$eid ORDER BY price ASC LIMIT 1")->fetch_assoc();
-        $minPrice = 0;
-        if ($pRow) {
-            $prices = array_filter([(float)$pRow['price'], (float)$pRow['couple_price'], (float)$pRow['female_price'], (float)$pRow['male_price']], function($p) { return $p > 0; });
-            $minPrice = !empty($prices) ? min($prices) : 0;
-        }
-
-        // Bookmark status
-        $isBookmarked = false;
-        if ($currentUid > 0) {
-            $favCheck = $event->query("SELECT id FROM tbl_fav WHERE uid=$currentUid AND eid=$eid");
-            $isBookmarked = ($favCheck && $favCheck->num_rows > 0);
-        }
-
-        $totalMembersRow = $event->query("SELECT SUM(ticket_book) as total FROM tbl_type_price WHERE eid=$eid")->fetch_assoc();
-        $totalMembers = (int)($totalMembersRow['total'] ?? 0);
-
-        $ev['min_price'] = $minPrice;
-        $ev['is_bookmarked'] = $isBookmarked;
-        $ev['total_members'] = $totalMembers > 0 ? $totalMembers : rand(15, 60);
-
+        $ev['min_price'] = $pricesMap[$eid] ?? 0;
+        $ev['is_bookmarked'] = isset($userBookmarks[$eid]);
+        $totCount = $totalMap[$eid] ?? 0;
+        $ev['total_members'] = $totCount > 0 ? $totCount : rand(15, 60);
         $eventsList[] = $ev;
     }
 }

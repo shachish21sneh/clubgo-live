@@ -1,48 +1,35 @@
 <?php 
 require dirname( dirname(__FILE__) ).'/include/eventconfig.php';
-header('Content-type: text/json');
+header('Content-Type: application/json; charset=utf-8');
+
 $data = json_decode(file_get_contents('php://input'), true);
-$uid = $data['uid'];
+$uid = isset($data['uid']) ? (int)$data['uid'] : 0;
 
-if($uid == '')
-{
-	$returnArr = array("ResponseCode"=>"401","Result"=>"false","ResponseMsg"=>"Something Went wrong  try again !");
+if ($uid <= 0) {
+    echo json_encode(["ResponseCode" => "401", "Result" => "false", "ResponseMsg" => "User ID is required!"]);
+    exit;
 }
-else 
-{
-	$v = array();
-	
-	
 
-$counter = $event->query("select * from tbl_fav where uid=".$uid."");
-   
-	if($counter->num_rows != 0)
-    {
-		
-		$pop = array();
-		$pol = array();
-		while($folk = $counter->fetch_assoc())
-		{
-$eventlist = $event->query("select * from tbl_event where status=1 and id=".$folk['eid']."");
-$nav = array();
-while($ev = $eventlist->fetch_assoc())
-{
-	$nav['event_id'] = $ev['id'];
-	$nav['event_title'] = $ev['title'];
-	$nav['event_img'] = $ev['img'];
-	$date=date_create($ev['sdate']);
-	$nav['event_sdate'] = date_format($date,"d F");
-	$nav['event_address'] = $ev['address'];
-	$v[] = $nav;
-}
-		}
-	
-	$returnArr = array("ResponseCode"=>"200","Result"=>"true","ResponseMsg"=>"Bookmark List Get Successfully!","EventData"=>$v);
-	}
-else 
-{
-	$returnArr = array("ResponseCode"=>"401","Result"=>"false","ResponseMsg"=>"Event  Bookmark List Not Found!");
-}	
+$query = "SELECT e.id AS event_id, e.title AS event_title, COALESCE(NULLIF(e.cover_img, ''), e.img) AS event_img, e.sdate, e.address 
+          FROM tbl_fav f 
+          JOIN tbl_event e ON f.eid = e.id 
+          WHERE f.uid = $uid AND e.status = 1 
+          ORDER BY f.id DESC";
 
+$result = $event->query($query);
+$v = [];
+if ($result && $result->num_rows > 0) {
+    while ($ev = $result->fetch_assoc()) {
+        $date = date_create($ev['sdate']);
+        $v[] = [
+            'event_id'      => (string)$ev['event_id'],
+            'event_title'   => $ev['event_title'],
+            'event_img'     => $ev['event_img'],
+            'event_sdate'   => $date ? date_format($date, "d F") : '',
+            'event_address' => $ev['address'] ?? ''
+        ];
+    }
+    echo json_encode(["ResponseCode" => "200", "Result" => "true", "ResponseMsg" => "Bookmark List Get Successfully!", "EventData" => $v]);
+} else {
+    echo json_encode(["ResponseCode" => "401", "Result" => "false", "ResponseMsg" => "Event Bookmark List Not Found!"]);
 }
-echo json_encode($returnArr);
