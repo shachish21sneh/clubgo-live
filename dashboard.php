@@ -24,7 +24,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total Category</p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_cat")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_cat")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -39,7 +39,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total Events</p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_event")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_event")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -54,7 +54,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total Pages</p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_page")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_page")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -69,7 +69,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total Faq Category</p>
-										<h3 class="text-white"><?php echo $event->query("select * from faq_cat")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM faq_cat")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -84,7 +84,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total Faq </p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_faq")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_faq")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -99,7 +99,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total Users </p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_user")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_user")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -115,7 +115,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total  Gallery Images</p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_gallery")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_gallery")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -131,7 +131,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total  Offers</p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_coupon")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_coupon")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -147,7 +147,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total  Tickets</p>
-										<h3 class="text-white"><?php echo $event->query("select * from tbl_ticket where ticket_type='Completed'")->num_rows;?></h3>
+										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_ticket WHERE ticket_type='Completed'")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>
@@ -163,7 +163,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total  Sales</p>
-										<h3 class="text-white"><?php $sales = $event->query("select sum(`total_amt`) as total_sales from tbl_ticket where ticket_type='Completed'")->fetch_assoc();
+										<h3 class="text-white"><?php $sales = $event->query("SELECT SUM(total_amt) as total_sales FROM tbl_ticket WHERE ticket_type='Completed'")->fetch_assoc();
 										echo empty($sales['total_sales']) ? '0'.$set['currency']: number_format((float)$sales['total_sales'], 2, '.', '').$set['currency'];
 										?></h3>
 									</div>

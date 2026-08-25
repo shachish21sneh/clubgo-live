@@ -47,6 +47,23 @@ include 'eventmania.php';
             <div class="loader--text"></div>
         </div>
     </div>
+    <script>
+        (function() {
+            function hidePreloader() {
+                var p = document.getElementById('preloader');
+                if (p) p.style.display = 'none';
+                var w = document.getElementById('main-wrapper');
+                if (w) w.classList.add('show');
+            }
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                setTimeout(hidePreloader, 100);
+            } else {
+                document.addEventListener('DOMContentLoaded', hidePreloader);
+            }
+            window.addEventListener('load', hidePreloader);
+            setTimeout(hidePreloader, 400);
+        })();
+    </script>
     <!--*******************
         Preloader end
     ********************-->

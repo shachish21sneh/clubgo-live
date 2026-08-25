@@ -1,12 +1,11 @@
 <?php
-if (isset($_SESSION['eventname'])) {
-
-} else {
+if (!isset($_SESSION['eventname'])) {
 	?>
 	<script>
-		window.location.href = "/";
+		window.location.href = "admin.php";
 	</script>
 <?php
+    exit;
 }
 ?>
 <div class="deznav">
