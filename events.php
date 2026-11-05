@@ -20,8 +20,9 @@ if ($catQuery) {
     }
 }
 
-// Build SQL Query
-$sql = "SELECT * FROM tbl_event WHERE status=1";
+// Build SQL Query (Current & Future events only)
+$today = date('Y-m-d');
+$sql = "SELECT * FROM tbl_event WHERE status=1 AND sdate >= '$today'";
 
 if (!empty($searchQ)) {
     $escapedQ = $event->real_escape_string($searchQ);
@@ -32,7 +33,6 @@ if ($selectedCatId > 0) {
     $sql .= " AND FIND_IN_SET('$selectedCatId', cid)";
 }
 
-$today = date('Y-m-d');
 if ($dateFilter === 'today') {
     $sql .= " AND sdate = '$today'";
 } elseif ($dateFilter === 'tomorrow') {

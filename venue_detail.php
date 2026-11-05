@@ -63,10 +63,11 @@ if ($vgRes) {
     }
 }
 
-// Fetch Events Hosted at this Venue
+// Fetch Events Hosted at this Venue (Current & Future only)
 $venueEvents = [];
+$today = date('Y-m-d');
 $escTitle = $event->real_escape_string($venue['loc_title']);
-$evRes = $event->query("SELECT * FROM tbl_event WHERE status=1 AND (loc_id=$vid OR place_name LIKE '%$escTitle%') ORDER BY sdate ASC LIMIT 6");
+$evRes = $event->query("SELECT * FROM tbl_event WHERE status=1 AND sdate >= '$today' AND (loc_id=$vid OR place_name LIKE '%$escTitle%') ORDER BY sdate ASC LIMIT 6");
 if ($evRes) {
     while ($ev = $evRes->fetch_assoc()) {
         $venueEvents[] = $ev;

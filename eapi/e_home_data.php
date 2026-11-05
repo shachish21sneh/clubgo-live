@@ -42,6 +42,11 @@ if ($cato) {
 $timestamp = date("Y-m-d");
 $chtime    = date("Y-m-d H:i:s");
 
+// Keep event_status synced with current date so past events are Completed and current/future events are Pending
+$event->query("UPDATE tbl_event SET event_status='Completed' WHERE sdate < '$timestamp' AND event_status='Pending'");
+$event->query("UPDATE tbl_event SET event_status='Pending' WHERE sdate >= '$timestamp' AND event_status='Completed'");
+$event->query("UPDATE tbl_ticket t JOIN tbl_event e ON t.eid = e.id SET t.ticket_type='Completed' WHERE e.sdate < '$timestamp' AND t.ticket_type='Booked'");
+
 // 2. Pre-fetch User Bookmarks into memory map O(1) lookup
 $userBookmarks = [];
 if ($uid > 0) {
@@ -121,25 +126,25 @@ function getFastEventData($ev, $userBookmarks, $sponsorMap, $membersMap, $eventT
     return $data;
 }
 
-// 6. Upcoming events (Pending)
+// 6. Upcoming events (Current & Future only)
 $v = [];
-$eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address, is_booked FROM tbl_event WHERE status=1 AND event_status='Pending' ORDER BY sdate ASC LIMIT 20");
+$eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address, is_booked FROM tbl_event WHERE status=1 AND sdate >= '$timestamp' AND event_status='Pending' ORDER BY sdate ASC LIMIT 20");
 if ($eventlist) {
     while ($ev = $eventlist->fetch_assoc()) {
         $v[] = getFastEventData($ev, $userBookmarks, $sponsorMap, $membersMap, $eventTicketsMap);
     }
 }
 
-// 7. Trending events (Today / Recent)
+// 7. Trending events (Current & Future only)
 $sec = [];
-$eventlistc = $event->query("SELECT id, title, img, cover_img, sdate, address, is_booked FROM tbl_event WHERE status=1 ORDER BY id DESC LIMIT 5");
+$eventlistc = $event->query("SELECT id, title, img, cover_img, sdate, address, is_booked FROM tbl_event WHERE status=1 AND sdate >= '$timestamp' ORDER BY sdate ASC, id DESC LIMIT 5");
 if ($eventlistc) {
     while ($evc = $eventlistc->fetch_assoc()) {
         $sec[] = getFastEventData($evc, $userBookmarks, $sponsorMap, $membersMap, $eventTicketsMap);
     }
 }
 
-// 8. Nearby events
+// 8. Nearby events (Current & Future only)
 $d = [];
 if ($lats != 0.0 && $longs != 0.0) {
     $eventlists = $event->query("
@@ -148,24 +153,33 @@ if ($lats != 0.0 && $longs != 0.0) {
         * COS((($longs-longtitude)*PI()/180))))*180/PI())*60*1.1515*1.609344) AS distance,
         id, title, img, address, sdate, stime, is_booked, etime, cover_img
         FROM tbl_event
-        WHERE status=1 ORDER BY distance ASC LIMIT 10
+        WHERE status=1 AND sdate >= '$timestamp'
+        ORDER BY sdate ASC, distance ASC LIMIT 10
     ");
-    if ($eventlists) {
-        while ($evs = $eventlists->fetch_assoc()) {
-            $data = getFastEventData($evs, $userBookmarks, $sponsorMap, $membersMap, $eventTicketsMap);
-            $date = date_create($evs['sdate']);
-            $data['event_sdate'] = strtoupper(($date ? date_format($date, "dS M - D - ") : '') . date("g:i A", strtotime($evs['stime'])));
-            $data['event_img']   = $evs['img'];
-            $d[] = $data;
-        }
+} else {
+    $eventlists = $event->query("
+        SELECT 0 AS distance,
+        id, title, img, address, sdate, stime, is_booked, etime, cover_img
+        FROM tbl_event
+        WHERE status=1 AND sdate >= '$timestamp'
+        ORDER BY sdate ASC, id DESC LIMIT 10
+    ");
+}
+if ($eventlists) {
+    while ($evs = $eventlists->fetch_assoc()) {
+        $data = getFastEventData($evs, $userBookmarks, $sponsorMap, $membersMap, $eventTicketsMap);
+        $date = date_create($evs['sdate']);
+        $data['event_sdate'] = strtoupper(($date ? date_format($date, "dS M - D - ") : '') . date("g:i A", strtotime($evs['stime'])));
+        $data['event_img']   = $evs['img'];
+        $d[] = $data;
     }
 }
 
-// 9. This month events
+// 9. This month events (Current & Future only)
 $pop = [];
 $month = date("m");
 $year = date("Y");
-$eve = $event->query("SELECT id, title, img, cover_img, sdate, address, is_booked FROM tbl_event WHERE status=1 AND MONTH(sdate) = $month AND YEAR(sdate) = $year ORDER BY sdate ASC LIMIT 15");
+$eve = $event->query("SELECT id, title, img, cover_img, sdate, address, is_booked FROM tbl_event WHERE status=1 AND sdate >= '$timestamp' AND MONTH(sdate) = $month AND YEAR(sdate) = $year ORDER BY sdate ASC LIMIT 15");
 if ($eve) {
     while ($e = $eve->fetch_assoc()) {
         $pop[] = getFastEventData($e, $userBookmarks, $sponsorMap, $membersMap, $eventTicketsMap);

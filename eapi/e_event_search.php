@@ -11,8 +11,9 @@ if (empty($title)) {
     exit;
 }
 
+$today = date("Y-m-d");
 $escaped = $event->real_escape_string($title);
-$eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address FROM tbl_event WHERE status=1 AND title LIKE '%$escaped%' ORDER BY id DESC LIMIT 50");
+$eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address FROM tbl_event WHERE status=1 AND sdate >= '$today' AND title LIKE '%$escaped%' ORDER BY sdate ASC, id DESC LIMIT 50");
 
 $v = [];
 if ($eventlist && $eventlist->num_rows > 0) {

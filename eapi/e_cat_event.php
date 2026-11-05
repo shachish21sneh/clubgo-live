@@ -11,7 +11,9 @@ if ($cid <= 0) {
     exit;
 }
 
-$eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address FROM tbl_event WHERE status=1 AND FIND_IN_SET('$cid', cid) ORDER BY id DESC LIMIT 50");
+$today = date("Y-m-d");
+
+$eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address FROM tbl_event WHERE status=1 AND sdate >= '$today' AND FIND_IN_SET('$cid', cid) ORDER BY sdate ASC, id DESC LIMIT 50");
 
 $v = [];
 if ($eventlist && $eventlist->num_rows > 0) {

@@ -53,7 +53,8 @@ include 'include/sidebar.php';
                                     <select name="eid" class="form-control select2-single" required>
                                         <option value="" disabled selected>Select Event</option>
                                         <?php
-                                        $cat = $event->query("select * from tbl_event");
+                                        $today = date('Y-m-d');
+                                        $cat = $event->query("SELECT * FROM tbl_event WHERE sdate >= '$today' OR id=" . (int)$data['eid'] . " ORDER BY sdate ASC, id DESC");
                                         while ($row = $cat->fetch_assoc()) {
                                             ?>
                                             <option value="<?php echo $row['id']; ?>" <?php if ($data['eid'] == $row['id']) {
@@ -336,7 +337,8 @@ include 'include/sidebar.php';
 												</button>
 												<ul class="dropdown-menu p-3" style="max-height: 200px; overflow-y: auto;">
 													<?php
-													$cat = $event->query("SELECT * FROM `tbl_event`");
+													$today = date('Y-m-d');
+													$cat = $event->query("SELECT * FROM `tbl_event` WHERE sdate >= '$today' ORDER BY sdate ASC, id DESC");
 													while ($row = $cat->fetch_assoc()) { ?>
 														<li>
 															<label class="dropdown-item">

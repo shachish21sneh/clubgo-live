@@ -501,35 +501,38 @@ if (isset($_POST['type'])) {
 		$urls = $urls . basename($newfilenames);
 
 
-		$target_dird = dirname(dirname(__FILE__)) . "/images/dress/";
-		$urld = "images/dress/";
-		$tempd = explode(".", $_FILES["dress_img"]["name"]);
-		$newfilenamed = uniqid() . round(microtime(true)) . '.' . end($tempd);
-		$target_filed = $target_dird . basename($newfilenamed);
-		$urld = $urld . basename($newfilenamed);
+		$urld = "";
+		if (!empty($_FILES["dress_img"]["name"])) {
+			$target_dird = dirname(dirname(__FILE__)) . "/images/dress/";
+			$urld = "images/dress/";
+			$tempd = explode(".", $_FILES["dress_img"]["name"]);
+			$newfilenamed = uniqid() . round(microtime(true)) . '.' . end($tempd);
+			$target_filed = $target_dird . basename($newfilenamed);
+			$urld = $urld . basename($newfilenamed);
+			move_uploaded_file($_FILES["dress_img"]["tmp_name"], $target_filed);
+		}
 
-
-		$target_dirf = dirname(dirname(__FILE__)) . "/images/floor/";
-		$urlf = "images/floor/";
-		$tempf = explode(".", $_FILES["floor_img"]["name"]);
-		$newfilenamef = uniqid() . round(microtime(true)) . '.' . end($tempf);
-		$target_filef = $target_dirf . basename($newfilenamef);
-		$urlf = $urlf . basename($newfilenamef);
-
-
+		$urlf = "";
+		if (!empty($_FILES["floor_img"]["name"])) {
+			$target_dirf = dirname(dirname(__FILE__)) . "/images/floor/";
+			$urlf = "images/floor/";
+			$tempf = explode(".", $_FILES["floor_img"]["name"]);
+			$newfilenamef = uniqid() . round(microtime(true)) . '.' . end($tempf);
+			$target_filef = $target_dirf . basename($newfilenamef);
+			$urlf = $urlf . basename($newfilenamef);
+			move_uploaded_file($_FILES["floor_img"]["tmp_name"], $target_filef);
+		}
 
 		move_uploaded_file($_FILES["cat_img"]["tmp_name"], $target_file);
 		move_uploaded_file($_FILES["cover_img"]["tmp_name"], $target_files);
-		move_uploaded_file($_FILES["dress_img"]["tmp_name"], $target_filed);
-		move_uploaded_file($_FILES["floor_img"]["tmp_name"], $target_filef);
 		$table = "tbl_event";
+		$event_status = ($sdate >= date('Y-m-d')) ? 'Pending' : 'Completed';
 
-		$field_values = array("cid", "title", "img", "cover_img", "sdate", "stime", "etime", "address", "status", "description", "disclaimer", "latitude", "longtitude", "place_name", "dress_img", "floor_img", "payment_type", "non_booking", "user_number", "user_link", "similer_event", "loc_id", "edate", "menu_description", "headline_json", "term_and_condition");
-		$data_values = array("$cid", "$title", "$url", "$urls", "$sdate", "$stime", "$etime", "$address", "$status", "$description", "$disclaimer", "$latitude", "$longtitude", "$place_name", "$urld", "$urlf", "$price_status", "$non_booking", "$user_number", "$user_link", "$similar_events", "$loc_id", "$edate", $menudescription, $headline_json, $terms);
+		$field_values = array("cid", "title", "img", "cover_img", "sdate", "stime", "etime", "address", "status", "event_status", "description", "disclaimer", "latitude", "longtitude", "place_name", "dress_img", "floor_img", "payment_type", "non_booking", "user_number", "user_link", "similer_event", "loc_id", "edate", "menu_description", "headline_json", "term_and_condition");
+		$data_values = array("$cid", "$title", "$url", "$urls", "$sdate", "$stime", "$etime", "$address", "$status", "$event_status", "$description", "$disclaimer", "$latitude", "$longtitude", "$place_name", "$urld", "$urlf", "$price_status", "$non_booking", "$user_number", "$user_link", "$similar_events", "$loc_id", "$edate", $menudescription, $headline_json, $terms);
 
 		$h = new Eventmania();
 		$check = $h->eventinsertdata($field_values, $data_values, $table);
-		print_r($check); exit;
 
 		if ($check == 1) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Event Add Successfully!!", "message" => "Event section!", "action" => "list_events.php");
@@ -595,9 +598,11 @@ if (isset($_POST['type'])) {
 		}
 
 		// Build field array
+		$event_status = ($sdate >= date('Y-m-d')) ? 'Pending' : 'Completed';
 		$field = array(
 			'place_name' => $place_name,
 			'status' => $status,
+			'event_status' => $event_status,
 			'title' => $title,
 			'cid' => $cid,
 			'sdate' => $sdate,

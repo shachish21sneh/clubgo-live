@@ -10,11 +10,12 @@ if ($uid <= 0) {
     exit;
 }
 
+$today = date("Y-m-d");
 $query = "SELECT e.id AS event_id, e.title AS event_title, COALESCE(NULLIF(e.cover_img, ''), e.img) AS event_img, e.sdate, e.address 
           FROM tbl_fav f 
           JOIN tbl_event e ON f.eid = e.id 
-          WHERE f.uid = $uid AND e.status = 1 
-          ORDER BY f.id DESC";
+          WHERE f.uid = $uid AND e.status = 1 AND e.sdate >= '$today'
+          ORDER BY e.sdate ASC, f.id DESC";
 
 $result = $event->query($query);
 $v = [];

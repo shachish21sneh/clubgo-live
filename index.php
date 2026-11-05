@@ -8,9 +8,9 @@ require_once 'includes/header.php';
 $currentUid = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 $today = date('Y-m-d');
 
-// 1. Fetch Featured Events for Hero Carousel
+// 1. Fetch Featured Events for Hero Carousel (Current & Future only)
 $heroEvents = [];
-$heroQuery = $event->query("SELECT * FROM tbl_event WHERE status=1 AND (cover_img != '' OR img != '') ORDER BY id DESC LIMIT 5");
+$heroQuery = $event->query("SELECT * FROM tbl_event WHERE status=1 AND sdate >= '$today' AND (cover_img != '' OR img != '') ORDER BY sdate ASC, id DESC LIMIT 5");
 if ($heroQuery) {
     while ($ev = $heroQuery->fetch_assoc()) {
         $heroEvents[] = $ev;
@@ -26,13 +26,13 @@ if ($catQuery) {
     }
 }
 
-// 3. Fetch Upcoming Events
+// 3. Fetch Upcoming Events (Current & Future only)
 $selectedCatId = isset($_GET['cat']) ? (int)$_GET['cat'] : 0;
-$eventSql = "SELECT * FROM tbl_event WHERE status=1";
+$eventSql = "SELECT * FROM tbl_event WHERE status=1 AND sdate >= '$today'";
 if ($selectedCatId > 0) {
     $eventSql .= " AND FIND_IN_SET('$selectedCatId', cid)";
 }
-$eventSql .= " ORDER BY id DESC LIMIT 12";
+$eventSql .= " ORDER BY sdate ASC, id DESC LIMIT 12";
 $eventsResult = $event->query($eventSql);
 $upcomingEvents = [];
 

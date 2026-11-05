@@ -169,8 +169,9 @@ if ($action === 'search_suggest') {
     if (strlen($q) >= 2) {
         $escaped = $event->real_escape_string($q);
         
-        // Search Events
-        $events = $event->query("SELECT id, title, img, place_name, sdate FROM tbl_event WHERE status=1 AND (title LIKE '%$escaped%' OR place_name LIKE '%$escaped%') LIMIT 5");
+        // Search Events (Current & Future only)
+        $today = date('Y-m-d');
+        $events = $event->query("SELECT id, title, img, place_name, sdate FROM tbl_event WHERE status=1 AND sdate >= '$today' AND (title LIKE '%$escaped%' OR place_name LIKE '%$escaped%') ORDER BY sdate ASC LIMIT 5");
         while ($ev = $events->fetch_assoc()) {
             $date = date_create($ev['sdate']);
             $results[] = [

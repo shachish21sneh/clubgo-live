@@ -39,7 +39,7 @@ include 'include/sidebar.php';
 									</span>
 									<div class="media-body text-white text-end">
 										<p class="mb-1">Total Events</p>
-										<h3 class="text-white"><?php echo (int)$event->query("SELECT COUNT(id) FROM tbl_event")->fetch_row()[0];?></h3>
+										<h3 class="text-white"><?php $today = date('Y-m-d'); echo (int)$event->query("SELECT COUNT(id) FROM tbl_event WHERE sdate >= '$today'")->fetch_row()[0];?></h3>
 									</div>
 								</div>
 							</div>

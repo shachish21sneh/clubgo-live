@@ -144,8 +144,9 @@ include 'include/sidebar.php';
 													<ul class="dropdown-menu p-3"
 														style="max-height: 200px; overflow-y: auto;">
 														<?php
+														$today = date('Y-m-d');
 														$selected_event = explode(',', $data['similer_event']);
-														$events = $event->query("SELECT * FROM `tbl_event` WHERE event_status='Pending'");
+														$events = $event->query("SELECT * FROM `tbl_event` WHERE status=1 AND sdate >= '$today' AND id != " . (int)$_GET['id'] . " ORDER BY sdate ASC");
 														while ($row = $events->fetch_assoc()) {
 															$checked = in_array($row['id'], $selected_event) ? 'checked' : '';
 															echo "<li><label class='dropdown-item'><input type='checkbox' name='smiler_event_id[]' value='{$row['id']}' $checked> " . htmlspecialchars($row['title']) . "</label></li>";
@@ -522,7 +523,8 @@ include 'include/sidebar.php';
 												</button>
 												<ul class="dropdown-menu p-3" style="max-height: 200px; overflow-y: auto;">
 													<?php
-													$cat = $event->query("SELECT * FROM `tbl_event` WHERE event_status='Pending'");
+													$today = date('Y-m-d');
+													$cat = $event->query("SELECT * FROM `tbl_event` WHERE status=1 AND sdate >= '$today' ORDER BY sdate ASC");
 													while ($row = $cat->fetch_assoc()) { ?>
 														<li>
 															<label class="dropdown-item">

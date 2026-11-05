@@ -5,10 +5,12 @@ header('Content-Type: application/json; charset=utf-8');
 $data = json_decode(file_get_contents('php://input'), true);
 $uid = isset($data['uid']) ? (int)$data['uid'] : 0;
 
+$today = date("Y-m-d");
+
 $eventlist = $event->query("SELECT id, title, img, cover_img, sdate, address 
                             FROM tbl_event 
-                            WHERE status = 1 
-                            ORDER BY id DESC LIMIT 50");
+                            WHERE status = 1 AND sdate >= '$today'
+                            ORDER BY sdate ASC, id DESC LIMIT 50");
 
 $v = [];
 if ($eventlist && $eventlist->num_rows > 0) {

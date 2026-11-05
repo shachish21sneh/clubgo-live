@@ -117,9 +117,10 @@ if (!empty($row['loc_similer_venue'])) {
 }
 $row['similarvenue'] = $similarVenues;
 
-// 4. Hosted Events at Venue
+// 4. Hosted Events at Venue (Current & Future only)
 $se = [];
-$evResult = $event->query("SELECT id, title, img, sdate, stime, address, payment_type, cid FROM tbl_event WHERE loc_id = $loc_id AND status = 1 ORDER BY sdate ASC LIMIT 10");
+$today = date("Y-m-d");
+$evResult = $event->query("SELECT id, title, img, sdate, stime, address, payment_type, cid FROM tbl_event WHERE loc_id = $loc_id AND status = 1 AND sdate >= '$today' ORDER BY sdate ASC LIMIT 10");
 if ($evResult && $evResult->num_rows > 0) {
     // User bookmarks
     $userBookmarks = [];

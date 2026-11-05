@@ -35,7 +35,8 @@ include 'include/sidebar.php';
                                         </thead>
                                         <tbody>
                                               <?php 
-										$city = $event->query("select * from tbl_type_price");
+										$today = date('Y-m-d');
+										$city = $event->query("SELECT tp.*, e.title AS event_title FROM tbl_type_price tp JOIN tbl_event e ON tp.eid = e.id WHERE e.sdate >= '$today' ORDER BY e.sdate ASC, tp.id DESC");
 										$i=0;
 										while($row = $city->fetch_assoc())
 										{
@@ -47,7 +48,7 @@ include 'include/sidebar.php';
                                                 </td>
 												
 												<td>
-                                                    <?php $e = $event->query("select * from tbl_event where id=".$row['eid']."")->fetch_assoc(); echo $e['title'];?>
+                                                    <?php echo htmlspecialchars($row['event_title']);?>
                                                 </td>
 												
 												<td>

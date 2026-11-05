@@ -10,8 +10,9 @@ $favEvents = [];
 $favVenues = [];
 
 if ($uid > 0) {
-    // Events
-    $eRes = $event->query("SELECT e.* FROM tbl_fav f JOIN tbl_event e ON f.eid = e.id WHERE f.uid = $uid AND e.status = 1 ORDER BY f.id DESC");
+    // Events (Current & Future only)
+    $today = date('Y-m-d');
+    $eRes = $event->query("SELECT e.* FROM tbl_fav f JOIN tbl_event e ON f.eid = e.id WHERE f.uid = $uid AND e.status = 1 AND e.sdate >= '$today' ORDER BY e.sdate ASC, f.id DESC");
     if ($eRes) {
         while ($ev = $eRes->fetch_assoc()) {
             $favEvents[] = $ev;

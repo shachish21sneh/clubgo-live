@@ -116,13 +116,14 @@ if ($mrows) {
     }
 }
 
-// 10. Similar Events
+// 10. Similar Events (Current & Future only)
 $se = [];
+$today = date("Y-m-d");
 if (!empty($ev['similer_event'])) {
     $simIds = array_map('intval', explode(',', $ev['similer_event']));
     $simString = implode(',', array_filter($simIds));
     if (!empty($simString)) {
-        $simQuery = $event->query("SELECT id, title, img, sdate, stime, address, payment_type, cid FROM tbl_event WHERE status = 1 AND id IN ($simString) LIMIT 6");
+        $simQuery = $event->query("SELECT id, title, img, sdate, stime, address, payment_type, cid FROM tbl_event WHERE status = 1 AND sdate >= '$today' AND id IN ($simString) ORDER BY sdate ASC LIMIT 6");
         if ($simQuery) {
             while ($sim = $simQuery->fetch_assoc()) {
                 $sDate = date_create($sim['sdate']);

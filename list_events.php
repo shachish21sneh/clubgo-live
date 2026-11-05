@@ -47,21 +47,29 @@ if ($check1->num_rows === 0) {
 $records_per_page = isset($_GET['size']) ? (int)$_GET['size'] : 10;
 $records_per_page = in_array($records_per_page, [10, 25, 50, 100]) ? $records_per_page : 10;
 
-// Search functionality
+$today = date('Y-m-d');
+
+// Keep event_status synced with current date
+$event->query("UPDATE tbl_event SET event_status='Completed' WHERE sdate < '$today' AND event_status='Pending'");
+$event->query("UPDATE tbl_event SET event_status='Pending' WHERE sdate >= '$today' AND event_status='Completed'");
+
+// Search & Date filter functionality (show current and future events only)
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$search_condition = '';
+$where_clauses = ["tbl_event.sdate >= '$today'"];
 $search_params = '';
 
 if ($search !== '') {
     $search_escaped = $event->real_escape_string($search);
     // use fully qualified names to avoid ambiguity
-    $search_condition = "WHERE (tbl_event.title LIKE '%$search_escaped%' 
+    $where_clauses[] = "(tbl_event.title LIKE '%$search_escaped%' 
                             OR tbl_event.id LIKE '%$search_escaped%' 
                             OR tbl_event.event_status LIKE '%$search_escaped%' 
                             OR tbl_event.sdate LIKE '%$search_escaped%'
                             OR {$venue_table}.loc_title LIKE '%$search_escaped%')";
     $search_params = '&search=' . urlencode($search);
 }
+
+$search_condition = 'WHERE ' . implode(' AND ', $where_clauses);
 
 // Pagination settings
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -83,7 +91,7 @@ $main_query = "SELECT tbl_event.*, {$venue_table}.loc_title as venue_name
                FROM tbl_event 
                LEFT JOIN {$venue_table} ON tbl_event.loc_id = {$venue_table}.loc_id 
                $search_condition 
-               ORDER BY tbl_event.id DESC 
+               ORDER BY tbl_event.sdate ASC, tbl_event.id DESC 
                LIMIT " . (int)$records_per_page . " OFFSET " . (int)$offset;
 
 $city = run_query($event, $main_query, $DEBUG);

@@ -85,12 +85,13 @@ if ($currentUid > 0) {
     $isBookmarked = ($fCheck && $fCheck->num_rows > 0);
 }
 
-// Similar Events
+// Similar Events (Current & Future only)
 $similarEvents = [];
+$today = date('Y-m-d');
 if (!empty($ev['similer_event'])) {
     $simIds = array_map('intval', explode(',', $ev['similer_event']));
     $simStr = implode(',', $simIds);
-    $simRes = $event->query("SELECT id, title, img, cover_img, sdate, place_name, address FROM tbl_event WHERE id IN ($simStr) AND status=1 LIMIT 3");
+    $simRes = $event->query("SELECT id, title, img, cover_img, sdate, place_name, address FROM tbl_event WHERE id IN ($simStr) AND status=1 AND sdate >= '$today' ORDER BY sdate ASC LIMIT 3");
     if ($simRes) {
         while ($sRow = $simRes->fetch_assoc()) {
             $similarEvents[] = $sRow;
