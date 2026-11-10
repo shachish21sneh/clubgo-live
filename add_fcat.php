@@ -31,7 +31,7 @@ include 'include/sidebar.php';
                                     
                                         <div class="form-group mb-3">
                                             <label>Category Name</label>
-                                            <input type="text" class="form-control input-rounded" name="title" value="<?php echo $data['title'];?>" placeholder="Enter Category Name" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="title" value="<?php echo $data['title'];?>" placeholder="Enter Category Name" required="">
 											 <input type="hidden" name="type" value="edit_fcat"/>
 										<input type="hidden" name="id" value="<?php echo $_GET['id'];?>"/>
                                         </div>
@@ -72,7 +72,7 @@ include 'include/sidebar.php';
                                     
                                         <div class="form-group mb-3">
                                             <label>Category Name</label>
-                                            <input type="text" class="form-control input-rounded" name="title" placeholder="Enter Category Name" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="title" placeholder="Enter Category Name" required="">
 											<input type="hidden" name="type" value="add_fcat"/>
                                         </div>
                                        

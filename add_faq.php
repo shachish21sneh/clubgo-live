@@ -47,14 +47,14 @@ include 'include/sidebar.php';
 										
                                         <div class="form-group mb-3">
                                             <label>FAQ Question</label>
-                                            <input type="text" class="form-control input-rounded" name="question" placeholder="Enter FAQ Question" value="<?php echo $data['question'];?>" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="question" placeholder="Enter FAQ Question" value="<?php echo $data['question'];?>" required="">
 											  <input type="hidden" name="type" value="edit_faq"/>
 										<input type="hidden" name="id" value="<?php echo $_GET['id'];?>"/>
                                         </div>
 										
 										<div class="form-group mb-3">
                                             <label>FAQ Answer</label>
-                                            <input type="text" class="form-control input-rounded" name="answer" placeholder="Enter FAQ Answer" name="cname" required="" value="<?php echo $data['answer'];?>">
+                                            <input type="text" class="form-control input-rounded" name="answer" placeholder="Enter FAQ Answer" required="" value="<?php echo $data['answer'];?>">
                                         </div>
                                         
 										
@@ -108,13 +108,13 @@ include 'include/sidebar.php';
                                     
                                         <div class="form-group mb-3">
                                             <label>FAQ Question</label>
-                                            <input type="text" class="form-control input-rounded" name="question" placeholder="Enter Category Name" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="question" placeholder="Enter FAQ Question" required="">
 											<input type="hidden" name="type" value="add_faq"/>
                                         </div>
 										
 										<div class="form-group mb-3">
                                             <label>FAQ Answer</label>
-                                            <input type="text" class="form-control input-rounded" name="answer" placeholder="Enter Category Name" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="answer" placeholder="Enter FAQ Answer" required="">
                                         </div>
                                        
 										 <div class="form-group mb-3">

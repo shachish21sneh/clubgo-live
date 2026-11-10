@@ -30,7 +30,7 @@ include 'include/sidebar.php';
 								
 								<div class="form-group mb-3">
                                             <label>Payment Gateway Name</label>
-                                            <input type="text" class="form-control " disabled placeholder="Enter Payment Gateway Name" value="<?php echo $data['title'];?>" name="cname" required="">
+                                            <input type="text" class="form-control " readonly placeholder="Enter Payment Gateway Name" value="<?php echo $data['title'];?>" name="cname" required="">
 											 <input type="hidden" name="type" value="edit_payment"/>
 										<input type="hidden" name="id" value="<?php echo $_GET['id'];?>"/>
                                         </div>

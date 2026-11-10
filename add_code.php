@@ -31,7 +31,7 @@ include 'include/sidebar.php';
                                     
                                         <div class="form-group mb-3">
                                             <label>Country Code </label>
-                                            <input type="text" class="form-control input-rounded" name="title" value="<?php echo $data['ccode'];?>" placeholder="Enter Country Code" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="title" value="<?php echo $data['ccode'];?>" placeholder="Enter Country Code" required="">
 											 <input type="hidden" name="type" value="edit_code"/>
 										<input type="hidden" name="id" value="<?php echo $_GET['id'];?>"/>
                                         </div>
@@ -72,7 +72,7 @@ include 'include/sidebar.php';
                                     
                                         <div class="form-group mb-3">
                                             <label>Country Code</label>
-                                            <input type="text" class="form-control input-rounded" name="title" placeholder="Enter Country Code " name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="title" placeholder="Enter Country Code " required="">
 											 <input type="hidden" name="type" value="add_code"/>
                                         </div>
                                        

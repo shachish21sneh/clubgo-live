@@ -33,7 +33,7 @@ include 'include/sidebar.php';
 								</thead>
 								<tbody>
 									<?php
-									$city = $event->query("SELECT tbi.*,tp.title FROM `tbl_package_items` tbi JOIN tbl_package tp on tbi.package_id=tp.id");
+									$city = $event->query("SELECT tbi.*, tp.title FROM `tbl_package_items` tbi LEFT JOIN tbl_package tp on tbi.package_id=tp.id");
 									$i = 0;
 									while ($row = $city->fetch_assoc()) {
 										$i = $i + 1;
@@ -44,11 +44,11 @@ include 'include/sidebar.php';
 											</td>
 
 											<td>
-												<?php echo $row['title']; ?>
+												<?php echo htmlspecialchars($row['title'] ?? ''); ?>
 											</td>
 
                       <td>
-												<?php echo $row['name']; ?>
+												<?php echo htmlspecialchars($row['name'] ?? ''); ?>
 											</td>
 
 
@@ -65,7 +65,7 @@ include 'include/sidebar.php';
 												<div class="d-flex">
 													<a href="add_package_item.php?id=<?php echo $row['id']; ?>"
 														class="btn btn-primary shadow btn-xs sharp me-1"><i class="fa fa-pencil"></i></a>
-
+													<a href="javascript:void(0)" data-id="<?php echo $row['id']; ?>" class="btn btn-danger shadow btn-xs sharp del" data-type="package_item_delete"><i class="fa fa-trash"></i></a>
 												</div>
 											</td>
 										</tr>

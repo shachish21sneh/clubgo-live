@@ -45,10 +45,10 @@ include 'include/sidebar.php';
                                                     <?php echo $i; ?>
                                                 </td>
 												<td>
-                                                    <?php $e = $event->query("select * from tbl_veneu where loc_id=".$row['vid']."")->fetch_assoc(); echo $e['loc_title'];?>
+                                                    <?php $e = $event->query("select * from tbl_veneu where loc_id=".(int)$row['vid']."")->fetch_assoc(); echo htmlspecialchars($e['loc_title'] ?? '');?>
                                                 </td>
 												<td>
-                                                    <?php $e = $event->query("select * from menu_category where id=".$row['menu_cat_id']."")->fetch_assoc(); echo $e['title'];?>
+                                                    <?php $e = $event->query("select * from menu_category where id=".(int)$row['menu_cat_id']."")->fetch_assoc(); echo htmlspecialchars($e['title'] ?? '');?>
                                                 </td>
                                                 
                                                 <td class="align-middle">
@@ -68,7 +68,7 @@ include 'include/sidebar.php';
                                                 <td>
 													<div class="d-flex">
 														<a href="add_venue_menu.php?id=<?php echo $row['id'];?>" class="btn btn-primary shadow btn-xs sharp me-1"><i class="fa fa-pencil"></i></a>
-														<a href="javascript:void(0)" data-id="<?php echo $row['id'];?>" class="btn btn-danger shadow btn-xs sharp del" data-type="menu_delete"><i class="fa fa-trash"></i></a>
+														<a href="javascript:void(0)" data-id="<?php echo $row['id'];?>" class="btn btn-danger shadow btn-xs sharp del" data-type="venue_menu_delete"><i class="fa fa-trash"></i></a>
 													</div>												
 												</td>												
                                             </tr>

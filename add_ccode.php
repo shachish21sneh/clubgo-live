@@ -26,7 +26,7 @@ include 'include/sidebar.php';
                             </div>
                             <div class="card-body">
                                
-                                   <form method="post" enctype="multipart/form-data" onsubmit="return postForm()">
+                                   <form method="post" enctype="multipart/form-data">
                                     
                                     
                                         
@@ -68,7 +68,7 @@ include 'include/sidebar.php';
 									</div>
 									
 								<div class="col-md-4 col-lg-4 col-xs-12 col-sm-12">
-									<button id="gen_code" class="btn btn-success"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+									<button type="button" id="gen_code" class="btn btn-success"><i class="fa fa-refresh" aria-hidden="true"></i></button>
 									</div>
 									</div>
 								</div>
@@ -120,7 +120,7 @@ include 'include/sidebar.php';
 <div class="col-md-6 col-lg-6 col-xs-12 col-sm-12">
 								<div class="form-group mb-3">
 									<label for="cname">Coupon Description </label>
-									<textarea class="form-control" rows="5" id="cdesc" name="cdesc" style="resize: none;" required><?php echo $sels['c_desc'];?></textarea>
+									<textarea class="form-control" rows="5" id="cdesc" name="cdesc" style="resize: none;"><?php echo $sels['c_desc'];?></textarea>
 								</div>
 							</div>							
 								
@@ -147,7 +147,7 @@ include 'include/sidebar.php';
                             </div>
                             <div class="card-body">
                                
-                                     <form method="post" enctype="multipart/form-data" onsubmit="return postForm()">
+                                     <form method="post" enctype="multipart/form-data">
                                     
                                     
                                         
@@ -186,7 +186,7 @@ include 'include/sidebar.php';
 									</div>
 									
 								<div class="col-md-4 col-lg-4 col-xs-12 col-sm-12">
-									<button id="gen_code" class="btn btn-success"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+									<button type="button" id="gen_code" class="btn btn-success"><i class="fa fa-refresh" aria-hidden="true"></i></button>
 									</div>
 									</div>
 								</div>
@@ -239,7 +239,7 @@ include 'include/sidebar.php';
 <div class="col-md-6 col-lg-6 col-xs-12 col-sm-12">
 								<div class="form-group mb-3">
 									<label for="cname">Coupon Description </label>
-									<textarea class="form-control" rows="5" id="cdesc" name="cdesc" style="resize: none;" required></textarea>
+									<textarea class="form-control" rows="5" id="cdesc" name="cdesc" style="resize: none;"></textarea>
 								</div>
 							</div>							
 								

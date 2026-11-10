@@ -49,6 +49,11 @@ function ensureUtf8mb4Schema($event) {
 }
 
 if (isset($_POST['type'])) {
+	try {
+	if (empty($_SESSION['utf8mb4_checked'])) {
+		ensureUtf8mb4Schema($event);
+		$_SESSION['utf8mb4_checked'] = 1;
+	}
 	if ($_POST['type'] == 'login') {
 		$username = $_POST['username'];
 		$password = $_POST['password'];
@@ -297,8 +302,7 @@ if (isset($_POST['type'])) {
 		$subtitle = $event->real_escape_string($_POST['subtitle']);
 		$cstatus = $_POST['cstatus'];
 		$cvalue = $_POST['cvalue'];
-		$cdesc = $event->real_escape_string($_POST['cdesc']);
-		$restid = implode(',', $_POST['restsearch']);
+		$cdesc = $event->real_escape_string($_POST['cdesc'] ?? '');
 		$target_dir = dirname(dirname(__FILE__)) . "/images/coupon/";
 		$url = "images/coupon/";
 		$temp = explode(".", $_FILES["f_up"]["name"]);
@@ -402,23 +406,26 @@ if (isset($_POST['type'])) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "FAQ Category Delete Successfully!!", "message" => "FAQ Category  section!", "action" => "list_fcat.php");
 		}
 	} else if ($_POST['type'] == 'edit_payment') {
-		$dname = mysqli_real_escape_string($event, $_POST['cname']);
-		$attributes = mysqli_real_escape_string($event, $_POST['p_attr']);
-		$ptitle = mysqli_real_escape_string($event, $_POST['ptitle']);
-		$okey = $_POST['status'];
-		$id = $_POST['id'];
-		$p_show = $_POST['p_show'];
+		$dname = mysqli_real_escape_string($event, $_POST['cname'] ?? '');
+		$attributes = mysqli_real_escape_string($event, $_POST['p_attr'] ?? '');
+		$ptitle = mysqli_real_escape_string($event, $_POST['ptitle'] ?? '');
+		$okey = $_POST['status'] ?? '1';
+		$id = (int)($_POST['id'] ?? 0);
+		$p_show = $_POST['p_show'] ?? '1';
 		$target_dir = dirname(dirname(__FILE__)) . "/images/payment/";
 		$url = "images/payment/";
-		$temp = explode(".", $_FILES["cat_img"]["name"]);
+		$temp = explode(".", $_FILES["cat_img"]["name"] ?? '');
 		$newfilename = round(microtime(true)) . '.' . end($temp);
 		$target_file = $target_dir . basename($newfilename);
 		$url = $url . basename($newfilename);
-		if ($_FILES["cat_img"]["name"] != '') {
+		if (!empty($_FILES["cat_img"]["name"])) {
 
 			move_uploaded_file($_FILES["cat_img"]["tmp_name"], $target_file);
 			$table = "tbl_payment_list";
-			$field = array('title' => $dname, 'status' => $okey, 'img' => $url, 'attributes' => $attributes, 'subtitle' => $ptitle, 'p_show' => $p_show);
+			$field = array('status' => $okey, 'img' => $url, 'attributes' => $attributes, 'subtitle' => $ptitle, 'p_show' => $p_show);
+			if ($dname !== '') {
+				$field['title'] = $dname;
+			}
 			$where = "where id=" . $id . "";
 			$h = new Eventmania();
 			$check = $h->eventupdateData($field, $table, $where);
@@ -428,7 +435,10 @@ if (isset($_POST['type'])) {
 			}
 		} else {
 			$table = "tbl_payment_list";
-			$field = array('title' => $dname, 'status' => $okey, 'attributes' => $attributes, 'subtitle' => $ptitle, 'p_show' => $p_show);
+			$field = array('status' => $okey, 'attributes' => $attributes, 'subtitle' => $ptitle, 'p_show' => $p_show);
+			if ($dname !== '') {
+				$field['title'] = $dname;
+			}
 			$where = "where id=" . $id . "";
 			$h = new Eventmania();
 			$check = $h->eventupdateData($field, $table, $where);
@@ -480,27 +490,27 @@ if (isset($_POST['type'])) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Faq Delete Successfully!!", "message" => "Faq section!", "action" => "list_faq.php");
 		}
 	} else if ($_POST['type'] == 'edit_setting') {
-		$webname = mysqli_real_escape_string($event, $_POST['webname']);
-		$timezone = $_POST['timezone'];
-		$currency = $_POST['currency'];
+		$webname = mysqli_real_escape_string($event, $_POST['webname'] ?? '');
+		$timezone = mysqli_real_escape_string($event, $_POST['timezone'] ?? '');
+		$currency = mysqli_real_escape_string($event, $_POST['currency'] ?? '');
 
-		$id = $_POST['id'];
+		$id = (int)($_POST['id'] ?? 1);
 
-		$one_key = $_POST['one_key'];
+		$one_key = mysqli_real_escape_string($event, $_POST['one_key'] ?? '');
 
-		$one_hash = $_POST['one_hash'];
+		$one_hash = mysqli_real_escape_string($event, $_POST['one_hash'] ?? '');
 
-		$scredit = $_POST['scredit'];
-		$rcredit = $_POST['rcredit'];
+		$scredit = mysqli_real_escape_string($event, $_POST['scredit'] ?? '0');
+		$rcredit = mysqli_real_escape_string($event, $_POST['rcredit'] ?? '0');
 
 
 		$target_dir = dirname(dirname(__FILE__)) . "/images/website/";
 		$url = "images/website/";
-		$temp = explode(".", $_FILES["weblogo"]["name"]);
+		$temp = explode(".", $_FILES["weblogo"]["name"] ?? '');
 		$newfilename = round(microtime(true)) . '.' . end($temp);
 		$target_file = $target_dir . basename($newfilename);
 		$url = $url . basename($newfilename);
-		if ($_FILES["weblogo"]["name"] != '') {
+		if (!empty($_FILES["weblogo"]["name"])) {
 
 			move_uploaded_file($_FILES["weblogo"]["tmp_name"], $target_file);
 			$table = "tbl_setting";
@@ -523,15 +533,16 @@ if (isset($_POST['type'])) {
 			}
 		}
 	} else if ($_POST['type'] == 'edit_profile') {
-		$dname = $_POST['email'];
-		$dsname = $_POST['password'];
-		$id = $_POST['id'];
+		$dname = $event->real_escape_string($_POST['username'] ?? $_POST['email'] ?? '');
+		$dsname = $event->real_escape_string($_POST['password'] ?? '');
+		$id = (int)($_POST['id'] ?? 1);
 		$table = "admin";
 		$field = array('username' => $dname, 'password' => $dsname);
 		$where = "where id=" . $id . "";
 		$h = new Eventmania();
 		$check = $h->eventupdateData($field, $table, $where);
 		if ($check == 1) {
+			$_SESSION['eventname'] = $dname;
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Profile Update Successfully!!", "message" => "Profile  section!", "action" => "profile.php");
 		}
 	} else if ($_POST['type'] == 'add_events') {
@@ -807,41 +818,39 @@ if (isset($_POST['type'])) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Sponsore Add Successfully!!", "message" => "Sponsore section!", "action" => "list_sponsore.php");
 		}
 	} else if ($_POST['type'] == 'add_type') {
-		$okey = $_POST['status'];
-		// $eid = $_POST['eid'];
-		//$etype = $event->real_escape_string($_POST['etype']);
+		$okey = $event->real_escape_string($_POST['status'] ?? '1');
 		$etype = "";
-		$tlimit = $_POST['tlimit'];
+		$tlimit = $event->real_escape_string($_POST['tlimit'] ?? '0');
 
-		$name = $_POST['name'];
-		$detail = $_POST['detail'];
-		$entrytype = $_POST['entrytype'];
+		$name = $event->real_escape_string($_POST['name'] ?? '');
+		$detail = $event->real_escape_string($_POST['detail'] ?? '');
+		$entrytype = $event->real_escape_string($_POST['entrytype'] ?? 'single');
 
 		// Single Entry Fields
-		$price = $_POST['price'] ?? 0;
-		$discount_price = $_POST['discount_price'] ?? '';
-		$ticket_description = $_POST['ticket_description'] ?? '';
-		$single_name = $_POST['single_name'] ?? '';
+		$price = $event->real_escape_string($_POST['price'] ?? 0);
+		$discount_price = $event->real_escape_string($_POST['discount_price'] ?? '');
+		$ticket_description = $event->real_escape_string($_POST['ticket_description'] ?? '');
+		$single_name = $event->real_escape_string($_POST['single_name'] ?? '');
 
 		// Couple Entry Fields
-		$t_price_c = $_POST['t_price_c'] ?? '';
-		$discount_price_c = $_POST['discount_price_c'] ?? '';
-		$ticket_description_c = $_POST['ticket_description_c'] ?? '';
+		$t_price_c = $event->real_escape_string($_POST['t_price_c'] ?? '');
+		$discount_price_c = $event->real_escape_string($_POST['discount_price_c'] ?? '');
+		$ticket_description_c = $event->real_escape_string($_POST['ticket_description_c'] ?? '');
 
 		// Female Fields
-		$t_price_f = $_POST['t_price_f'] ?? '';
-		$discount_price_f = $_POST['discount_price_f'] ?? '';
-		$ticket_description_f = $_POST['ticket_description_f'] ?? '';
+		$t_price_f = $event->real_escape_string($_POST['t_price_f'] ?? '');
+		$discount_price_f = $event->real_escape_string($_POST['discount_price_f'] ?? '');
+		$ticket_description_f = $event->real_escape_string($_POST['ticket_description_f'] ?? '');
 
 		// Male Fields
-		$t_price_m = $_POST['t_price_m'] ?? '';
-		$discount_price_m = $_POST['discount_price_m'] ?? '';
-		$ticket_description_m = $_POST['ticket_description_m'] ?? '';
+		$t_price_m = $event->real_escape_string($_POST['t_price_m'] ?? '');
+		$discount_price_m = $event->real_escape_string($_POST['discount_price_m'] ?? '');
+		$ticket_description_m = $event->real_escape_string($_POST['ticket_description_m'] ?? '');
 
 		// Other Fields
-		$couple_ratio = $_POST['couple_ratio'];
-		$tstarttime = $_POST['t_start_time'];
-		$tendtime = $_POST['t_end_time'];
+		$couple_ratio = $event->real_escape_string($_POST['couple_ratio'] ?? '');
+		$tstarttime = $event->real_escape_string($_POST['t_start_time'] ?? '');
+		$tendtime = $event->real_escape_string($_POST['t_end_time'] ?? '');
 
 		if ($entrytype == "couple") {
 			$price = 0;
@@ -959,42 +968,41 @@ if (isset($_POST['type'])) {
 		}
 
 	} else if ($_POST['type'] == 'edit_type') {
-		$id = $_POST['id'];
-		$okey = $_POST['status'];
-		$eid = $_POST['eid'];
-		//$etype = $event->real_escape_string($_POST['etype']);
+		$id = (int)($_POST['id'] ?? 0);
+		$okey = $event->real_escape_string($_POST['status'] ?? '1');
+		$eid = (int)($_POST['eid'] ?? 0);
 		$etype = "";
-		$tlimit = $_POST['tlimit'];
+		$tlimit = $event->real_escape_string($_POST['tlimit'] ?? '0');
 
-		$name = $_POST['name'];
-		$detail = $_POST['detail'];
-		$entrytype = $_POST['entrytype'];
+		$name = $event->real_escape_string($_POST['name'] ?? '');
+		$detail = $event->real_escape_string($_POST['detail'] ?? '');
+		$entrytype = $event->real_escape_string($_POST['entrytype'] ?? 'single');
 
 		// Single Entry Fields
-		$price = $_POST['price'] ?? 0;
-		$discount_price = $_POST['discount_price'] ?? '';
-		$ticket_description = $_POST['ticket_description'] ?? '';
-		$single_name = $_POST['single_name'] ?? '';
+		$price = $event->real_escape_string($_POST['price'] ?? 0);
+		$discount_price = $event->real_escape_string($_POST['discount_price'] ?? '');
+		$ticket_description = $event->real_escape_string($_POST['ticket_description'] ?? '');
+		$single_name = $event->real_escape_string($_POST['single_name'] ?? '');
 
 		// Couple Entry Fields
-		$t_price_c = $_POST['t_price_c'] ?? '';
-		$discount_price_c = $_POST['discount_price_c'] ?? '';
-		$ticket_description_c = $_POST['ticket_description_c'] ?? '';
+		$t_price_c = $event->real_escape_string($_POST['t_price_c'] ?? '');
+		$discount_price_c = $event->real_escape_string($_POST['discount_price_c'] ?? '');
+		$ticket_description_c = $event->real_escape_string($_POST['ticket_description_c'] ?? '');
 
 		// Female Fields
-		$t_price_f = $_POST['t_price_f'] ?? '';
-		$discount_price_f = $_POST['discount_price_f'] ?? '';
-		$ticket_description_f = $_POST['ticket_description_f'] ?? '';
+		$t_price_f = $event->real_escape_string($_POST['t_price_f'] ?? '');
+		$discount_price_f = $event->real_escape_string($_POST['discount_price_f'] ?? '');
+		$ticket_description_f = $event->real_escape_string($_POST['ticket_description_f'] ?? '');
 
 		// Male Fields
-		$t_price_m = $_POST['t_price_m'] ?? '';
-		$discount_price_m = $_POST['discount_price_m'] ?? '';
-		$ticket_description_m = $_POST['ticket_description_m'] ?? '';
+		$t_price_m = $event->real_escape_string($_POST['t_price_m'] ?? '');
+		$discount_price_m = $event->real_escape_string($_POST['discount_price_m'] ?? '');
+		$ticket_description_m = $event->real_escape_string($_POST['ticket_description_m'] ?? '');
 
 		// Other Fields
-		$couple_ratio = $_POST['couple_ratio'];
-		$tstarttime = $_POST['t_start_time'];
-		$tendtime = $_POST['t_end_time'];
+		$couple_ratio = $event->real_escape_string($_POST['couple_ratio'] ?? '');
+		$tstarttime = $event->real_escape_string($_POST['t_start_time'] ?? '');
+		$tendtime = $event->real_escape_string($_POST['t_end_time'] ?? '');
 
 		if ($entrytype == "couple") {
 			$price = '';
@@ -1156,14 +1164,14 @@ if (isset($_POST['type'])) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Gallery Delete Successfully!!", "message" => "Gallery  section!", "action" => "list_gallery.php");
 		}
 	} else if ($_POST['type'] == 'cover_delete') {
-		$id = $_POST['id'];
+		$id = (int)$_POST['id'];
 
 		$table = "tbl_cover";
 		$where = "where id=" . $id . "";
 		$h = new Eventmania();
 		$check = $h->eventDeleteData($where, $table);
 		if ($check == 1) {
-			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Cover Image Delete Successfully!!", "message" => "Cover Image  section!", "action" => "list_gallery.php");
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Cover Image Delete Successfully!!", "message" => "Cover Image  section!", "action" => "list_cover.php");
 		}
 	} else if ($_POST['type'] == 'sponsore_delete') {
 		$id = $_POST['id'];
@@ -1245,7 +1253,7 @@ if (isset($_POST['type'])) {
 		$check = $h->eventupdateData($field, $table, $where);
 
 		if ($check == 1) {
-			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "facilities Update Successfully!!", "message" => "facilities section!", "action" => "list_cuisines.php");
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "facilities Update Successfully!!", "message" => "facilities section!", "action" => "list_facilities.php");
 		}
 	} else if ($_POST['type'] == 'add_knowfor') {
 
@@ -1630,22 +1638,6 @@ if (isset($_POST['type'])) {
 		} catch (Exception $e) {
 			$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => $e->getMessage(), "action" => "list_venue.php");
 		}
-	} else if ($_POST['type'] == 'edit_Package_item') {
-		$id = $_POST['id'];
-
-		$ctitle = $event->real_escape_string($_POST['title']);
-		$pck_id = $event->real_escape_string($_POST['package_id']);
-		$cstatus = $_POST['status'];
-
-		$table = "tbl_package_items";
-		$field = array('name' => $ctitle, 'package_id' => $pck_id, 'status' => $cstatus);
-		$where = "where id=" . $id . "";
-		$h = new Eventmania();
-		$check = $h->eventupdateData($field, $table, $where);
-
-		if ($check == 1) {
-			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "item Update Successfully!!", "message" => "item section!", "action" => "list_package_item.php");
-		}
 	} else if ($_POST['type'] == 'add_menu_cat') {
 		$okey = $_POST['status'];
 		$title = $event->real_escape_string($_POST['title']);
@@ -1832,6 +1824,93 @@ if (isset($_POST['type'])) {
 				$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Menu Update Successfully!!", "message" => "Menu section!", "action" => "list_venue_menu.php");
 			}
 		}
+	} else if ($_POST['type'] == 'category_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_cat");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Category Deleted Successfully!!", "message" => "Category section!", "action" => "list_category.php");
+		}
+	} else if ($_POST['type'] == 'menu_cat_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "menu_category");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Menu Category Deleted Successfully!!", "message" => "Menu Category section!", "action" => "list_menu_cat.php");
+		}
+	} else if ($_POST['type'] == 'menu_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_menu");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Event Menu Deleted Successfully!!", "message" => "Event Menu section!", "action" => "list_menu.php");
+		}
+	} else if ($_POST['type'] == 'venue_gallery_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_venue_gallery");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Venue Gallery Deleted Successfully!!", "message" => "Venue Gallery section!", "action" => "list_venue_gallery.php");
+		}
+	} else if ($_POST['type'] == 'venue_menu_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_venue_menu");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Venue Menu Deleted Successfully!!", "message" => "Venue Menu section!", "action" => "list_venue_menu.php");
+		}
+	} else if ($_POST['type'] == 'package_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_package");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Package Deleted Successfully!!", "message" => "Package section!", "action" => "list_package.php");
+		}
+	} else if ($_POST['type'] == 'package_item_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_package_items");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Package Item Deleted Successfully!!", "message" => "Package Item section!", "action" => "list_package_item.php");
+		}
+	} else if ($_POST['type'] == 'cuisines_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_cuisines");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Cuisine Deleted Successfully!!", "message" => "Cuisine section!", "action" => "list_cuisines.php");
+		}
+	} else if ($_POST['type'] == 'facilities_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_facilities");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Facility Deleted Successfully!!", "message" => "Facility section!", "action" => "list_facilities.php");
+		}
+	} else if ($_POST['type'] == 'knowfor_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_known_for");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Know For Deleted Successfully!!", "message" => "Know For section!", "action" => "list_knowfor.php");
+		}
+	} else if ($_POST['type'] == 'city_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_city");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "City Deleted Successfully!!", "message" => "City section!", "action" => "list_city.php");
+		}
+	} else if ($_POST['type'] == 'venue_category_delete') {
+		$id = (int)$_POST['id'];
+		$h = new Eventmania();
+		$check = $h->eventDeleteData("where id=" . $id, "tbl_venue_category");
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Venue Category Deleted Successfully!!", "message" => "Venue Category section!", "action" => "list_venue_category.php");
+		}
+	}
+	} catch (Throwable $e) {
+		$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => $e->getMessage(), "action" => "dashboard.php");
 	}
 }
 echo json_encode($returnArr);

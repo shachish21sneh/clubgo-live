@@ -28,6 +28,17 @@
  echo $validate['data'];
  ?>
 <script>
+window.postForm = function() {
+    if (window.jQuery && $.fn.summernote) {
+        $('#cdesc, #disclaimer, .summernote').each(function() {
+            var $el = $(this);
+            if ($el.next('.note-editor').length) {
+                $el.val($el.summernote('code'));
+            }
+        });
+    }
+    return true;
+};
 $(document).ready(function() {
     $(document).off('submit', 'form').on('submit', 'form', function(e) {
         var method = ($(this).attr('method') || '').toLowerCase();
@@ -41,7 +52,7 @@ $(document).ready(function() {
 
         // Sync Summernote editors into textareas before serializing
         if ($.fn.summernote) {
-            $('#cdesc, #disclaimer').each(function() {
+            $('#cdesc, #disclaimer, .summernote').each(function() {
                 var $el = $(this);
                 if ($el.next('.note-editor').length) {
                     $el.val($el.summernote('code'));

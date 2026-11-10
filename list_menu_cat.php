@@ -62,7 +62,7 @@ include 'include/sidebar.php';
                                                 <td>
 													<div class="d-flex">
 														<a href="add_menu_cat.php?id=<?php echo $row['id'];?>" class="btn btn-primary shadow btn-xs sharp me-1"><i class="fa fa-pencil"></i></a>
-														<a href="javascript:void(0)" data-id="<?php echo $row['id'];?>" class="btn btn-danger shadow btn-xs sharp del" data-type="code_delete"><i class="fa fa-trash"></i></a>
+														<a href="javascript:void(0)" data-id="<?php echo $row['id'];?>" class="btn btn-danger shadow btn-xs sharp del" data-type="menu_cat_delete"><i class="fa fa-trash"></i></a>
 													</div>												
 												</td>												
                                             </tr>

@@ -26,12 +26,12 @@ include 'include/sidebar.php';
                             </div>
                             <div class="card-body">
                                
-                                    <form method="post" enctype="multipart/form-data" onsubmit="return postForm()">
+                                    <form method="post" enctype="multipart/form-data">
                                     
                                     
 									<div class="form-group mb-3">
                                             <label>Page Title</label>
-                                            <input type="text" class="form-control input-rounded" value="<?php echo $data['title'];?>" name="ctitle" placeholder="Enter Category Name" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" value="<?php echo $data['title'];?>" name="ctitle" placeholder="Enter Page Title" required="">
                                         <input type="hidden" name="type" value="edit_page"/>
 										<input type="hidden" name="id" value="<?php echo $_GET['id'];?>"/>
 										</div>
@@ -71,13 +71,13 @@ include 'include/sidebar.php';
                             </div>
                             <div class="card-body">
                                
-                                    <form method="post" enctype="multipart/form-data" onsubmit="return postForm()">
+                                    <form method="post" enctype="multipart/form-data">
                                     
 									
                                     
                                         <div class="form-group mb-3">
                                             <label>Page Title</label>
-                                            <input type="text" class="form-control input-rounded" name="ctitle" placeholder="Enter Category Name" name="cname" required="">
+                                            <input type="text" class="form-control input-rounded" name="ctitle" placeholder="Enter Page Title" required="">
 											<input type="hidden" name="type" value="add_page"/>
                                         </div>
 										

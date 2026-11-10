@@ -44,23 +44,24 @@ include 'include/sidebar.php';
                                         </thead>
                                         <tbody>
 										<?php 
-										$city = $event->query("select * from tbl_ticket where eid=".$_GET['id']."");
+										$eid_filter = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+										$city = $event->query("select * from tbl_ticket where eid=" . $eid_filter);
 										$i=0;
 										while($row = $city->fetch_assoc())
 										{
 											$i = $i + 1;
-											$eve = $event->query("SELECT * FROM `tbl_event` where id=".$row['eid']."")->fetch_assoc();
-	$user = $event->query("SELECT * FROM `tbl_user` where id=".$row['uid']."")->fetch_assoc();
-	$pdata = $event->query("select * from tbl_payment_list where id=".$row['p_method_id']."")->fetch_assoc();
+											$eve = $event->query("SELECT * FROM `tbl_event` where id=".(int)$row['eid'])->fetch_assoc();
+	$user = $event->query("SELECT * FROM `tbl_user` where id=".(int)$row['uid'])->fetch_assoc();
+	$pdata = $event->query("select * from tbl_payment_list where id=".(int)$row['p_method_id'])->fetch_assoc();
 											?>
                                             <tr>
                                                 <td>
                                                     <?php echo $i; ?>
                                                 </td>
 												<td> <?php echo $row['id']; ?></td>
-												<td> <?php echo $eve['title']; ?></td>
-                                                <td> <?php echo $user['name']; ?></td>
-												<td> <?php echo $row['type']; ?></td>
+												<td> <?php echo htmlspecialchars($eve['title'] ?? ''); ?></td>
+                                                <td> <?php echo htmlspecialchars($user['name'] ?? ''); ?></td>
+												<td> <?php echo htmlspecialchars($row['type'] ?? ''); ?></td>
 												<td> <strong><?php echo $row['price'].$set['currency']; ?></strong></td>
 												<td> <strong><?php echo $row['subtotal'].$set['currency']; ?></strong></td>
 												<td> <strong><?php echo $row['cou_amt'].$set['currency']; ?></strong></td>
@@ -68,7 +69,7 @@ include 'include/sidebar.php';
 												<td> <strong><?php echo $row['tax'].$set['currency']; ?></strong></td>
 												<td> <strong><?php echo $row['wall_amt'].$set['currency']; ?></strong></td>
 												<td> <strong><?php echo $row['total_amt'].$set['currency']; ?></strong></td>
-												<td> <?php echo $pdata['title'].'<br><strong>'.$row['transaction_id'].'</strong>'; ?></td>
+												<td> <?php echo htmlspecialchars($pdata['title'] ?? '').'<br><strong>'.htmlspecialchars($row['transaction_id'] ?? '').'</strong>'; ?></td>
 												
                                               
 												

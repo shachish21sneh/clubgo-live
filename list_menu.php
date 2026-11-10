@@ -48,7 +48,7 @@ include 'include/sidebar.php';
                                                     <?php echo htmlspecialchars($row['event_title']);?>
                                                 </td>
 												<td>
-                                                    <?php $e = $event->query("select * from menu_category where id=".$row['menu_cat_id']."")->fetch_assoc(); echo $e['title'];?>
+                                                    <?php $e = $event->query("select * from menu_category where id=".(int)$row['menu_cat_id']."")->fetch_assoc(); echo htmlspecialchars($e['title'] ?? '');?>
                                                 </td>
                                                 
                                                 <td class="align-middle">

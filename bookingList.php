@@ -48,9 +48,9 @@ $offset = ($page - 1) * $records_per_page;
 // Get total number of records (with search and filter)
 $total_query = "SELECT COUNT(*) as total 
                 FROM tbl_ticket t
-                JOIN tbl_user u ON t.uid = u.id
-                JOIN tbl_event e ON t.eid = e.id
-                JOIN tbl_type_price tp ON t.typeid = tp.id
+                LEFT JOIN tbl_user u ON t.uid = u.id
+                LEFT JOIN tbl_event e ON t.eid = e.id
+                LEFT JOIN tbl_type_price tp ON t.typeid = tp.id
                 $search_condition";
 $total_stmt = $event->query($total_query);
 $total_records = $total_stmt->fetch_assoc()['total'];
@@ -184,9 +184,9 @@ $total_pages = ceil($total_records / $records_per_page);
                                                   e.title as event_title, e.sdate as event_date, e.stime as event_time,
                                                   tp.type as ticket_type, tp.price as ticket_price
                                                   FROM tbl_ticket t
-                                                  JOIN tbl_user u ON t.uid = u.id
-                                                  JOIN tbl_event e ON t.eid = e.id
-                                                  JOIN tbl_type_price tp ON t.typeid = tp.id
+                                                  LEFT JOIN tbl_user u ON t.uid = u.id
+                                                  LEFT JOIN tbl_event e ON t.eid = e.id
+                                                  LEFT JOIN tbl_type_price tp ON t.typeid = tp.id
                                                   $search_condition
                                                   ORDER BY t.id DESC 
                                                   LIMIT $records_per_page OFFSET $offset";

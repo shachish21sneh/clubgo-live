@@ -54,7 +54,7 @@ include 'include/sidebar.php';
 									for($k=0;$k<$limit;$k++)
 									{
 									?>
-									<option <?php echo $tzlist[$k];?> <?php if($tzlist[$k] == $set['timezone']) {echo 'selected';}?>><?php echo $tzlist[$k];?></option>
+									<option value="<?php echo $tzlist[$k];?>" <?php if($tzlist[$k] == $set['timezone']) {echo 'selected';}?>><?php echo $tzlist[$k];?></option>
 									<?php } ?>
 									</select>
 								</div>

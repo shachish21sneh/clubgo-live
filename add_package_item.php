@@ -48,7 +48,7 @@ include 'include/sidebar.php';
                         $result = $event->query($query);
                         while ($row = $result->fetch_assoc()) {
                             $selected = ($row['id'] == $data['package_id']) ? 'selected' : ''; // Pre-select package
-                            echo '<option value="' . $row['id'] . '" ' . $selected . '>' . $row['name'] . '</option>';
+                            echo '<option value="' . $row['id'] . '" ' . $selected . '>' . htmlspecialchars($row['title']) . '</option>';
                         }
                         ?>
                     </select>
