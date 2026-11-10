@@ -23,7 +23,7 @@ if ($page < 1) $page = 1;
 $offset = ($page - 1) * $records_per_page;
 
 // Get total number of records (with search)
-$total_query = "SELECT COUNT(*) as total FROM `tbl_veneu` JOIN tbl_city ON tbl_veneu.loc_city_id=tbl_city.id $search_condition";
+$total_query = "SELECT COUNT(*) as total FROM `tbl_veneu` LEFT JOIN tbl_city ON tbl_veneu.loc_city_id=tbl_city.id $search_condition";
 $total_stmt = $event->query($total_query);
 $total_records = $total_stmt->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $records_per_page);
@@ -127,7 +127,7 @@ $total_pages = ceil($total_records / $records_per_page);
                                     <?php 
                                     // Main query with search condition
                                     $main_query = "SELECT tbl_veneu.*, tbl_city.name as cityname FROM `tbl_veneu` 
-                                                  JOIN tbl_city ON tbl_veneu.loc_city_id=tbl_city.id 
+                                                  LEFT JOIN tbl_city ON tbl_veneu.loc_city_id=tbl_city.id 
                                                   $search_condition 
                                                   ORDER BY tbl_veneu.loc_id DESC 
                                                   LIMIT $records_per_page OFFSET $offset";
@@ -149,7 +149,7 @@ $total_pages = ceil($total_records / $records_per_page);
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge badge-info"><?php echo htmlspecialchars($row['cityname']); ?></span>
+                                            <span class="badge badge-info"><?php echo htmlspecialchars($row['cityname'] ?? ''); ?></span>
                                         </td>
                                         <td>
                                             <?php
@@ -158,14 +158,30 @@ $total_pages = ceil($total_records / $records_per_page);
                                             ?>
                                         </td>
                                         <?php if ($row['loc_status'] == "A") { ?>
-                                        <td><span class="badge badge-success">Active</span></td>
+                                        <td>
+                                            <a href="javascript:void(0)" class="badge badge-success drop" data-id="<?php echo $row['loc_id']; ?>" data-status="I" data-type="update_status" coll-type="venue" title="Click to Unpublish">Publish</a>
+                                        </td>
                                         <?php } else { ?>
-                                        <td><span class="badge badge-danger">Inactive</span></td>
+                                        <td>
+                                            <a href="javascript:void(0)" class="badge badge-danger drop" data-id="<?php echo $row['loc_id']; ?>" data-status="A" data-type="update_status" coll-type="venue" title="Click to Publish">Unpublish</a>
+                                        </td>
                                         <?php } ?>
                                         <td>
                                             <div class="d-flex">
                                                 <a href="add_venue.php?id=<?php echo $row['loc_id'];?>" class="btn btn-primary shadow btn-xs sharp me-1" title="Edit Venue">
                                                     <i class="fa fa-pencil"></i>
+                                                </a>
+                                                <?php if ($row['loc_status'] == "A") { ?>
+                                                <a href="javascript:void(0)" data-id="<?php echo $row['loc_id']; ?>" data-status="I" data-type="update_status" coll-type="venue" class="btn btn-warning shadow btn-xs sharp me-1 drop" title="Unpublish Venue">
+                                                    <i class="fa fa-eye-slash"></i>
+                                                </a>
+                                                <?php } else { ?>
+                                                <a href="javascript:void(0)" data-id="<?php echo $row['loc_id']; ?>" data-status="A" data-type="update_status" coll-type="venue" class="btn btn-success shadow btn-xs sharp me-1 drop" title="Publish Venue">
+                                                    <i class="fa fa-eye"></i>
+                                                </a>
+                                                <?php } ?>
+                                                <a href="javascript:void(0)" data-id="<?php echo $row['loc_id']; ?>" class="btn btn-danger shadow btn-xs sharp del" data-type="venue_delete" title="Delete Venue">
+                                                    <i class="fa fa-trash"></i>
                                                 </a>
                                             </div>												
                                         </td>												

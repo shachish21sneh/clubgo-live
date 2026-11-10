@@ -54,9 +54,9 @@ class Eventmania {
 $cols = array();
 
     foreach($field as $key=>$val) {
-        if($val != NULL || ($table == 'tbl_event' && in_array($key, ['user_number', 'user_link']))) // check if value is not null then only add that column to array, or for tbl_event user_number/user_link always set to blank if null
+        if($val !== null || ($table == 'tbl_event' && in_array($key, ['user_number', 'user_link']))) // check if value is not null then only add that column to array, or for tbl_event user_number/user_link always set to blank if null
         {
-			  if($val == NULL && $table == 'tbl_event' && in_array($key, ['user_number', 'user_link'])) {
+			  if($val === null && $table == 'tbl_event' && in_array($key, ['user_number', 'user_link'])) {
 				$val = '';
 			  }
            $cols[] = "$key = '$val'";
@@ -75,7 +75,7 @@ $result=$GLOBALS['event']->query($sql);
 $cols = array();
 
     foreach($field as $key=>$val) {
-        if($val != NULL) // check if value is not null then only add that colunm to array
+        if($val !== null) // check if value is not null then only add that colunm to array
         {
            $cols[] = "$key = '$val'"; 
         }

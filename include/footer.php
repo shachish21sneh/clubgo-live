@@ -27,3 +27,88 @@
  include 'include/eventconfig.php';
  echo $validate['data'];
  ?>
+<script>
+$(document).ready(function() {
+    $(document).off('submit', 'form').on('submit', 'form', function(e) {
+        var method = ($(this).attr('method') || '').toLowerCase();
+        if (method === 'get') {
+            return true;
+        }
+        e.preventDefault();
+        var $form = $(this);
+        var $submitBtns = $form.find(':input[type="submit"]');
+        $submitBtns.prop('disabled', true);
+
+        // Sync Summernote editors into textareas before serializing
+        if ($.fn.summernote) {
+            $('#cdesc, #disclaimer').each(function() {
+                var $el = $(this);
+                if ($el.next('.note-editor').length) {
+                    $el.val($el.summernote('code'));
+                }
+            });
+        }
+
+        var formData = new FormData();
+        var serialized = $form.serialize();
+        var b64 = btoa(unescape(encodeURIComponent(serialized)));
+        formData.append('_b64_form', b64);
+
+        $form.find('input[type="file"]').each(function() {
+            var name = $(this).attr('name');
+            if (name && this.files && this.files.length > 0) {
+                for (var i = 0; i < this.files.length; i++) {
+                    formData.append(name, this.files[i]);
+                }
+            }
+        });
+
+        $.ajax({
+            type: 'POST',
+            url: 'include/event.php',
+            data: formData,
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: function(data) {
+                try {
+                    var res = (typeof data === 'object') ? data : JSON.parse(data);
+                    if (res.Result === 'true') {
+                        iziToast.success({
+                            title: res.title || 'Success',
+                            message: res.message || '',
+                            position: 'topRight'
+                        });
+                        setTimeout(function() {
+                            window.location.href = res.action || window.location.href;
+                        }, 1500);
+                    } else {
+                        $submitBtns.prop('disabled', false);
+                        iziToast.error({
+                            title: res.title || 'Error',
+                            message: res.message || 'Operation failed',
+                            position: 'topRight'
+                        });
+                    }
+                } catch (err) {
+                    $submitBtns.prop('disabled', false);
+                    iziToast.error({
+                        title: 'Error!',
+                        message: 'Unexpected server response. Please try again.',
+                        position: 'topRight'
+                    });
+                }
+            },
+            error: function(xhr) {
+                $submitBtns.prop('disabled', false);
+                iziToast.error({
+                    title: 'Request Failed (' + xhr.status + ')',
+                    message: 'Could not save changes. Please check your input and try again.',
+                    position: 'topRight'
+                });
+            }
+        });
+        return false;
+    });
+});
+</script>

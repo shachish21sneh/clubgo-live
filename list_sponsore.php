@@ -35,8 +35,7 @@ include 'include/sidebar.php';
                                         </thead>
                                         <tbody>
                                               <?php 
-										$today = date('Y-m-d');
-										$city = $event->query("SELECT s.*, e.title AS event_title FROM tbl_sponsore s JOIN tbl_event e ON s.eid = e.id WHERE e.sdate >= '$today' ORDER BY e.sdate ASC, s.id DESC");
+										$city = $event->query("SELECT s.*, e.title AS event_title FROM tbl_sponsore s LEFT JOIN tbl_event e ON s.eid = e.id ORDER BY s.id DESC");
 										$i=0;
 										while($row = $city->fetch_assoc())
 										{

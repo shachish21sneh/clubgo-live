@@ -1,8 +1,53 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 'On');
+ini_set('display_errors', '0');
 require 'eventconfig.php';
 require 'eventmania.php';
+
+if (!empty($_POST['_b64_form'])) {
+	$decodedPost = [];
+	parse_str(base64_decode($_POST['_b64_form']), $decodedPost);
+	if (is_array($decodedPost)) {
+		$_POST = array_merge($_POST, $decodedPost);
+	}
+	unset($_POST['_b64_form']);
+}
+
+$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => "Something went wrong", "action" => "dashboard.php");
+
+function ensureUtf8mb4Schema($event) {
+	try {
+		$colCheck = $event->query("SHOW FULL COLUMNS FROM `tbl_event` WHERE Field = 'term_and_condition'");
+		if ($colCheck && ($col = $colCheck->fetch_assoc())) {
+			if (strpos((string)$col['Collation'], 'utf8mb4') === false) {
+				try {
+					$event->query("ALTER TABLE `tbl_event` DROP INDEX `idx_title`, ADD INDEX `idx_title` (`title`(191))");
+				} catch (Exception $e) {}
+				$event->query("ALTER TABLE `tbl_event` 
+					MODIFY `title` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `address` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `description` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `disclaimer` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `place_name` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `menu_description` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+					MODIFY `headline_json` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+					MODIFY `term_and_condition` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL");
+			}
+		}
+		$vCheck = $event->query("SHOW FULL COLUMNS FROM `tbl_veneu` WHERE Field = 'loc_description'");
+		if ($vCheck && ($vcol = $vCheck->fetch_assoc())) {
+			if (strpos((string)$vcol['Collation'], 'utf8mb4') === false) {
+				$event->query("ALTER TABLE `tbl_veneu` 
+					MODIFY `loc_title` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `loc_description` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `loc_open_close` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `loc_customer_headlines` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+					MODIFY `loc_days_json` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL");
+			}
+		}
+	} catch (Exception $e) {}
+}
+
 if (isset($_POST['type'])) {
 	if ($_POST['type'] == 'login') {
 		$username = $_POST['username'];
@@ -33,8 +78,8 @@ if (isset($_POST['type'])) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Country Code Add Successfully!!", "message" => "Country Code section!", "action" => "list_code.php");
 		}
 	} else if ($_POST['type'] == 'update_status') {
-		$id = $_POST['id'];
-		$status = $_POST['status'];
+		$id = (int)$_POST['id'];
+		$status = $event->real_escape_string($_POST['status']);
 		$coll_type = $_POST['coll_type'];
 
 		if ($coll_type == 'user') {
@@ -46,8 +91,44 @@ if (isset($_POST['type'])) {
 			if ($check == 1) {
 				$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "User Status Change Successfully!!", "message" => "User section!", "action" => "userlist.php");
 			}
+		} else if ($coll_type == 'venue') {
+			$table = "tbl_veneu";
+			$field = "loc_status='" . $status . "'";
+			$where = "where loc_id=" . $id . "";
+			$h = new Eventmania();
+			$check = $h->eventupdateData_single($field, $table, $where);
+			if ($check == 1) {
+				$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Venue Status Changed Successfully!!", "message" => "Venue section!", "action" => "list_venue.php");
+			}
+		} else if ($coll_type == 'event') {
+			$table = "tbl_event";
+			$field = "status=" . (int)$status . "";
+			$where = "where id=" . $id . "";
+			$h = new Eventmania();
+			$check = $h->eventupdateData_single($field, $table, $where);
+			if ($check == 1) {
+				$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Event Status Changed Successfully!!", "message" => "Event section!", "action" => "list_events.php");
+			}
 		} else {
 			$returnArr = array("ResponseCode" => "200", "Result" => "false", "title" => "Option Not There!!", "message" => "Error!!", "action" => "dashboard.php");
+		}
+	} else if ($_POST['type'] == 'event_delete') {
+		$id = (int)$_POST['id'];
+		$table = "tbl_event";
+		$where = "where id=" . $id . "";
+		$h = new Eventmania();
+		$check = $h->eventDeleteData($where, $table);
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Event Deleted Successfully!!", "message" => "Event section!", "action" => "list_events.php");
+		}
+	} else if ($_POST['type'] == 'venue_delete') {
+		$id = (int)$_POST['id'];
+		$table = "tbl_veneu";
+		$where = "where loc_id=" . $id . "";
+		$h = new Eventmania();
+		$check = $h->eventDeleteData($where, $table);
+		if ($check == 1) {
+			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Venue Deleted Successfully!!", "message" => "Venue section!", "action" => "list_venue.php");
 		}
 	} else if ($_POST['type'] == 'add_fcat') {
 		$okey = $_POST['status'];
@@ -455,36 +536,35 @@ if (isset($_POST['type'])) {
 		}
 	} else if ($_POST['type'] == 'add_events') {
 		try {
-    // Code that might throw an exception
+		ensureUtf8mb4Schema($event);
 
+		$title = $event->real_escape_string($_POST['title'] ?? '');
+		$address = $event->real_escape_string($_POST['address'] ?? '');
+		$description = $event->real_escape_string($_POST['cdesc'] ?? '');
+		$disclaimer = $event->real_escape_string($_POST['disclaimer'] ?? '');
+		$menudescription = $event->real_escape_string($_POST['menudesc'] ?? '');
+		$headline_json = $event->real_escape_string($_POST['headline_list_json'] ?? '');
+		$terms = $event->real_escape_string($_POST['terms'] ?? '');
 
-		$title = $event->real_escape_string($_POST['title']);
-		$address = $event->real_escape_string($_POST['address']);
-		$description = $event->real_escape_string($_POST['cdesc']);
-		$disclaimer = $event->real_escape_string($_POST['disclaimer']);
-		$menudescription = $event->real_escape_string($_POST['menudesc']);
-		$headline_json = $event->real_escape_string($_POST['headline_list_json']);
-		$terms = $event->real_escape_string($_POST['terms']);
-
-		$status = $_POST['status'];
-		$place_name = $event->real_escape_string($_POST['pname']);
-		$sdate = $_POST['sdate'];
-		$edate = $_POST['edate'];
-		$stime = $_POST['stime'];
-		$etime = $_POST['etime'];
+		$status = $_POST['status'] ?? '1';
+		$place_name = $event->real_escape_string($_POST['pname'] ?? '');
+		$sdate = $_POST['sdate'] ?? '';
+		$edate = $_POST['edate'] ?? '';
+		$stime = $_POST['stime'] ?? '';
+		$etime = $_POST['etime'] ?? '';
 		//$cid = $_POST['cid'];
-		$latitude = $_POST['latitude'];
-		$longtitude = $_POST['longtitude'];
-		$cid = isset($_POST['cid']) ? implode(',', $_POST['cid']) : '';
-		$price_status = $_POST['price_status'];
-		$non_booking = $_POST['non_booking'];
-		$user_number = $_POST['user_number'];
-		$user_link = $_POST['user_link'];
-		$loc_id = $_POST['loc_id'];
+		$latitude = $event->real_escape_string($_POST['latitude'] ?? '');
+		$longtitude = $event->real_escape_string($_POST['longtitude'] ?? '');
+		$cid = isset($_POST['cid']) ? implode(',', (array)$_POST['cid']) : '';
+		$price_status = $event->real_escape_string($_POST['price_status'] ?? 'F');
+		$non_booking = $event->real_escape_string($_POST['non_booking'] ?? 'FALSE');
+		$user_number = $event->real_escape_string($_POST['user_number'] ?? '');
+		$user_link = $event->real_escape_string($_POST['user_link'] ?? '');
+		$loc_id = $_POST['loc_id'] ?? 0;
 		if ($loc_id == "") {
 			$loc_id = 0;
 		}
-		$similar_events = isset($_POST['smiler_event_id']) ? implode(',', $_POST['smiler_event_id']) : '';
+		$similar_events = isset($_POST['smiler_event_id']) ? implode(',', (array)$_POST['smiler_event_id']) : '';
 
 		$target_dir = dirname(dirname(__FILE__)) . "/images/event/";
 		$url = "images/event/";
@@ -543,35 +623,37 @@ if (isset($_POST['type'])) {
 
 	} 
 }else if ($_POST['type'] == 'edit_event') {
-		$title = $event->real_escape_string($_POST['title']);
-		$id = $_POST['id'];
-		$address = $event->real_escape_string($_POST['address']);
-		$description = $event->real_escape_string($_POST['cdesc']);
-		$disclaimer = $event->real_escape_string($_POST['disclaimer']);
-		$menudescription = $event->real_escape_string($_POST['menudesc']);
-		$headline_json = $event->real_escape_string($_POST['headline_list_json']);
-		$terms = $event->real_escape_string($_POST['terms']);
-		$status = $_POST['status'];
-		$place_name = $event->real_escape_string($_POST['pname']);
-		$sdate = $_POST['sdate'];
-		$edate = $_POST['edate'];
-		$stime = $_POST['stime'];
-		$etime = $_POST['etime'];
+	try {
+		ensureUtf8mb4Schema($event);
+		$title = $event->real_escape_string($_POST['title'] ?? '');
+		$id = (int)($_POST['id'] ?? 0);
+		$address = $event->real_escape_string($_POST['address'] ?? '');
+		$description = $event->real_escape_string($_POST['cdesc'] ?? '');
+		$disclaimer = $event->real_escape_string($_POST['disclaimer'] ?? '');
+		$menudescription = $event->real_escape_string($_POST['menudesc'] ?? '');
+		$headline_json = $event->real_escape_string($_POST['headline_list_json'] ?? '');
+		$terms = $event->real_escape_string($_POST['terms'] ?? '');
+		$status = $_POST['status'] ?? '1';
+		$place_name = $event->real_escape_string($_POST['pname'] ?? '');
+		$sdate = $_POST['sdate'] ?? '';
+		$edate = $_POST['edate'] ?? '';
+		$stime = $_POST['stime'] ?? '';
+		$etime = $_POST['etime'] ?? '';
 		//$cid = $_POST['cid'];
-		$loc_id = $_POST['loc_id'];
+		$loc_id = $_POST['loc_id'] ?? 0;
 		if ($loc_id == "") {
 			$loc_id = 0;
 		}
-		$latitude = $_POST['latitude'];
-		$longtitude = $_POST['longtitude'];
-		$cid = isset($_POST['cid']) ? implode(',', $_POST['cid']) : '';
+		$latitude = $event->real_escape_string($_POST['latitude'] ?? '');
+		$longtitude = $event->real_escape_string($_POST['longtitude'] ?? '');
+		$cid = isset($_POST['cid']) ? implode(',', (array)$_POST['cid']) : '';
 
-		$price_status = $_POST['price_status'];
-		$non_booking = $_POST['non_booking'];
-		$user_number = $_POST['user_number'];
-		$user_link = $_POST['user_link'];
+		$price_status = $event->real_escape_string($_POST['price_status'] ?? 'F');
+		$non_booking = $event->real_escape_string($_POST['non_booking'] ?? 'FALSE');
+		$user_number = $event->real_escape_string($_POST['user_number'] ?? '');
+		$user_link = $event->real_escape_string($_POST['user_link'] ?? '');
 
-		$similar_events = isset($_POST['smiler_event_id']) ? implode(',', $_POST['smiler_event_id']) : '';
+		$similar_events = isset($_POST['smiler_event_id']) ? implode(',', (array)$_POST['smiler_event_id']) : '';
 		// Prepare directories and filenames for images
 		$images = [
 			'cat_img' => 'event',
@@ -660,6 +742,9 @@ if (isset($_POST['type'])) {
 				$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Event Update Successfully!!", "message" => "Event section!", "action" => "list_events.php");
 			}
 		}
+	} catch (Exception $e) {
+		$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error Occurred!!", "message" => $e->getMessage(), "action" => "list_events.php");
+	}
 	} else if ($_POST['type'] == 'add_gallery') {
 		$okey = $_POST['status'];
 		$eid = $_POST['eid'];
@@ -1321,16 +1406,18 @@ if (isset($_POST['type'])) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "item Update Successfully!!", "message" => "item section!", "action" => "list_package_item.php");
 		}
 	} else if ($_POST['type'] == 'add_venue') {
-		$ctitle = $event->real_escape_string($_POST['title']);
-		$vdesc = $event->real_escape_string($_POST['vdesc']);
+		try {
+		ensureUtf8mb4Schema($event);
+		$ctitle = $event->real_escape_string($_POST['title'] ?? '');
+		$vdesc = $event->real_escape_string($_POST['vdesc'] ?? '');
 
 		//$loc_open_close = $event->real_escape_string($_POST['loc_open_close']);
 		$loc_open_close = "";
 
-		$loc_cus_headline = $event->real_escape_string($_POST['loc_cus_headline']);
-		$cid = $event->real_escape_string($_POST['cityid']);
-		$status = $event->real_escape_string($_POST['status']);
-		$featuredorder = $event->real_escape_string($_POST['featuredorder']);
+		$loc_cus_headline = $event->real_escape_string($_POST['loc_cus_headline'] ?? '');
+		$cid = $event->real_escape_string($_POST['cityid'] ?? '');
+		$status = $event->real_escape_string($_POST['status'] ?? 'A');
+		$featuredorder = (isset($_POST['featuredorder']) && $_POST['featuredorder'] !== '') ? $event->real_escape_string($_POST['featuredorder']) : '0';
 		// $sdate = $event->real_escape_string($_POST['sdate']);
 		// $edate = $event->real_escape_string($_POST['edate']);
 		// $stime = $event->real_escape_string($_POST['stime']);
@@ -1341,28 +1428,29 @@ if (isset($_POST['type'])) {
 		$etime = "00:00:00";
 
 		// Handling multiple selections
-		$categories = isset($_POST['cid']) ? implode(',', $_POST['cid']) : '';
-		$cuisines = isset($_POST['cusid']) ? implode(',', $_POST['cusid']) : '';
-		$facilities = isset($_POST['facid']) ? implode(',', $_POST['facid']) : '';
-		$known_for = isset($_POST['knowforid']) ? implode(',', $_POST['knowforid']) : '';
-		$packages = isset($_POST['pkgitemid']) ? implode(',', $_POST['pkgitemid']) : '';
-		$days = isset($_POST['daysid']) ? implode(',', $_POST['daysid']) : '';
-		$similar_venues = isset($_POST['similar_venue']) ? implode(',', $_POST['similar_venue']) : '';
+		$categories = isset($_POST['cid']) ? implode(',', (array)$_POST['cid']) : '';
+		$cuisines = isset($_POST['cusid']) ? implode(',', (array)$_POST['cusid']) : '';
+		$facilities = isset($_POST['facid']) ? implode(',', (array)$_POST['facid']) : '';
+		$known_for = isset($_POST['knowforid']) ? implode(',', (array)$_POST['knowforid']) : '';
+		$packages = isset($_POST['pkgitemid']) ? implode(',', (array)$_POST['pkgitemid']) : '';
+		$days = isset($_POST['daysid']) ? implode(',', (array)$_POST['daysid']) : '';
+		$similar_venues = isset($_POST['similar_venue']) ? implode(',', (array)$_POST['similar_venue']) : '';
 
-		if (isset($_POST['days'])) {
+		$loc_days_json = '[]';
+		if (isset($_POST['days']) && is_array($_POST['days'])) {
 			$days_data = [];
 
 			foreach ($_POST['days'] as $day => $times) {
 				if (isset($times['open'])) { // If day is checked
 					$days_data[$day] = [
-						'start' => $times['start'],
-						'end' => $times['end']
+						'start' => $times['start'] ?? '00:00',
+						'end' => $times['end'] ?? '12:00'
 					];
 				}
 			}
 
 			// Convert to JSON and include in your insert query
-			$loc_days_json = json_encode($days_data);
+			$loc_days_json = $event->real_escape_string(json_encode($days_data));
 			// Add this to your INSERT query for tbl_veneu
 		}
 
@@ -1433,21 +1521,26 @@ if (isset($_POST['type'])) {
 		if ($check == 1) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Venue Added Successfully!", "message" => "Venue section!", "action" => "list_venue.php");
 		} else {
-			$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => "Failed to add venue.");
+			$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => "Failed to add venue.", "action" => "list_venue.php");
+		}
+		} catch (Exception $e) {
+			$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => $e->getMessage(), "action" => "list_venue.php");
 		}
 	} else if ($_POST['type'] == 'edit_venue') {
-		$id = $event->real_escape_string($_POST['venue_id']);
+		try {
+		ensureUtf8mb4Schema($event);
+		$id = (int)($_POST['venue_id'] ?? 0);
 
-		$ctitle = $event->real_escape_string($_POST['title']);
-		$vdesc = $event->real_escape_string($_POST['vdesc']);
+		$ctitle = $event->real_escape_string($_POST['title'] ?? '');
+		$vdesc = $event->real_escape_string($_POST['vdesc'] ?? '');
 
 		//$loc_open_close = $event->real_escape_string($_POST['loc_open_close']);
 		$loc_open_close = "";
 
-		$loc_cus_headline = $event->real_escape_string($_POST['loc_cus_headline']);
-		$cid = $event->real_escape_string($_POST['cityid']);
-		$status = $event->real_escape_string($_POST['status']);
-		$featuredorder = $event->real_escape_string($_POST['featuredorder']);
+		$loc_cus_headline = $event->real_escape_string($_POST['loc_cus_headline'] ?? '');
+		$cid = $event->real_escape_string($_POST['cityid'] ?? '');
+		$status = $event->real_escape_string($_POST['status'] ?? 'A');
+		$featuredorder = (isset($_POST['featuredorder']) && $_POST['featuredorder'] !== '') ? $event->real_escape_string($_POST['featuredorder']) : '0';
 		// $sdate = $event->real_escape_string($_POST['sdate']);
 		// $edate = $event->real_escape_string($_POST['edate']);
 		// $stime = $event->real_escape_string($_POST['stime']);
@@ -1458,29 +1551,29 @@ if (isset($_POST['type'])) {
 		$etime = "00:00:00";
 
 		// Handling multiple selections
-		$categories = isset($_POST['cid']) ? implode(',', $_POST['cid']) : '';
-		$cuisines = isset($_POST['cusid']) ? implode(',', $_POST['cusid']) : '';
-		$facilities = isset($_POST['facid']) ? implode(',', $_POST['facid']) : '';
-		$known_for = isset($_POST['knowforid']) ? implode(',', $_POST['knowforid']) : '';
-		$packages = isset($_POST['pkgitemid']) ? implode(',', $_POST['pkgitemid']) : '';
-		$days = isset($_POST['daysid']) ? implode(',', $_POST['daysid']) : '';
-		$similar_venues = isset($_POST['similar_venue']) ? implode(',', $_POST['similar_venue']) : '';
+		$categories = isset($_POST['cid']) ? implode(',', (array)$_POST['cid']) : '';
+		$cuisines = isset($_POST['cusid']) ? implode(',', (array)$_POST['cusid']) : '';
+		$facilities = isset($_POST['facid']) ? implode(',', (array)$_POST['facid']) : '';
+		$known_for = isset($_POST['knowforid']) ? implode(',', (array)$_POST['knowforid']) : '';
+		$packages = isset($_POST['pkgitemid']) ? implode(',', (array)$_POST['pkgitemid']) : '';
+		$days = isset($_POST['daysid']) ? implode(',', (array)$_POST['daysid']) : '';
+		$similar_venues = isset($_POST['similar_venue']) ? implode(',', (array)$_POST['similar_venue']) : '';
 
-
-		if (isset($_POST['days'])) {
+		$loc_days_json = '[]';
+		if (isset($_POST['days']) && is_array($_POST['days'])) {
 			$days_data = [];
 
 			foreach ($_POST['days'] as $day => $times) {
 				if (isset($times['open'])) { // If day is checked
 					$days_data[$day] = [
-						'start' => $times['start'],
-						'end' => $times['end']
+						'start' => $times['start'] ?? '00:00',
+						'end' => $times['end'] ?? '12:00'
 					];
 				}
 			}
 
 			// Convert to JSON and include in your update query
-			$loc_days_json = json_encode($days_data);
+			$loc_days_json = $event->real_escape_string(json_encode($days_data));
 			// Add this to your UPDATE query for tbl_veneu
 		}
 		// Handling image upload
@@ -1532,7 +1625,10 @@ if (isset($_POST['type'])) {
 		if ($check == 1) {
 			$returnArr = array("ResponseCode" => "200", "Result" => "true", "title" => "Venue Updated Successfully!", "message" => "Venue section!", "action" => "list_venue.php");
 		} else {
-			$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => "Failed to update venue.");
+			$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => "Failed to update venue.", "action" => "list_venue.php");
+		}
+		} catch (Exception $e) {
+			$returnArr = array("ResponseCode" => "500", "Result" => "false", "title" => "Error!", "message" => $e->getMessage(), "action" => "list_venue.php");
 		}
 	} else if ($_POST['type'] == 'edit_Package_item') {
 		$id = $_POST['id'];

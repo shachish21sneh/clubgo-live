@@ -34,8 +34,7 @@ include 'include/sidebar.php';
                                             <select name="eid" class="form-control select2-single" required>
 											<option value="" disabled selected>Select Event</option>
 											<?php 
-											$today = date('Y-m-d');
-											$cat = $event->query("SELECT * FROM tbl_event WHERE sdate >= '$today' OR id=" . (int)$data['eid'] . " ORDER BY sdate ASC, id DESC");
+											$cat = $event->query("SELECT * FROM tbl_event ORDER BY id DESC");
 											while($row = $cat->fetch_assoc())
 											{
 												?>
@@ -103,8 +102,7 @@ include 'include/sidebar.php';
                                             <select name="eid" class="form-control select2-single" required>
 											<option value="" disabled selected>Select Event</option>
 											<?php 
-											$today = date('Y-m-d');
-											$cat = $event->query("SELECT * FROM tbl_event WHERE sdate >= '$today' ORDER BY sdate ASC, id DESC");
+											$cat = $event->query("SELECT * FROM tbl_event ORDER BY id DESC");
 											while($row = $cat->fetch_assoc())
 											{
 												?>

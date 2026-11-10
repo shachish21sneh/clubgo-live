@@ -144,9 +144,8 @@ include 'include/sidebar.php';
 													<ul class="dropdown-menu p-3"
 														style="max-height: 200px; overflow-y: auto;">
 														<?php
-														$today = date('Y-m-d');
 														$selected_event = explode(',', $data['similer_event']);
-														$events = $event->query("SELECT * FROM `tbl_event` WHERE status=1 AND sdate >= '$today' AND id != " . (int)$_GET['id'] . " ORDER BY sdate ASC");
+														$events = $event->query("SELECT * FROM `tbl_event` WHERE status=1 AND id != " . (int)$_GET['id'] . " ORDER BY id DESC");
 														while ($row = $events->fetch_assoc()) {
 															$checked = in_array($row['id'], $selected_event) ? 'checked' : '';
 															echo "<li><label class='dropdown-item'><input type='checkbox' name='smiler_event_id[]' value='{$row['id']}' $checked> " . htmlspecialchars($row['title']) . "</label></li>";
@@ -220,8 +219,7 @@ include 'include/sidebar.php';
 										<div class="form-group mb-3">
 											<label>Event Description</label>
 											<textarea class="form-control" rows="5" id="cdesc" name="cdesc"
-												style="resize: none;"
-												required><?php echo $data['description']; ?></textarea>
+												style="resize: none;"><?php echo $data['description']; ?></textarea>
 										</div>
 									</div>
 
@@ -229,7 +227,7 @@ include 'include/sidebar.php';
 										<div class="form-group mb-3">
 											<label>Event Disclaimer</label>
 											<textarea class="form-control" rows="5" id="disclaimer" name="disclaimer"
-												style="resize: none;" required><?php echo $data['disclaimer']; ?></textarea>
+												style="resize: none;"><?php echo $data['disclaimer']; ?></textarea>
 										</div>
 									</div>
 
@@ -311,8 +309,7 @@ include 'include/sidebar.php';
 										<div class="form-group mb-3">
 											<label>Menu Description</label>
 											<textarea class="form-control" rows="5" id="menudesc" name="menudesc"
-												style="resize: none;"
-												required><?php  if(isset($data['menu_description'])){
+												style="resize: none;"><?php  if(isset($data['menu_description'])){
 												echo $data['menu_description'];
 												}else{
 													echo "";
@@ -326,8 +323,7 @@ include 'include/sidebar.php';
 									<div class="form-group mb-3">
 										<label>Term And Condition</label>
 										<textarea class="form-control" rows="5" id="terms" name="terms"
-												style="resize: none;"
-												required><?php  if(isset($data['term_and_condition'])){
+												style="resize: none;"><?php  if(isset($data['term_and_condition'])){
 												echo $data['term_and_condition'];
 												}else{
 													echo "";
@@ -523,8 +519,7 @@ include 'include/sidebar.php';
 												</button>
 												<ul class="dropdown-menu p-3" style="max-height: 200px; overflow-y: auto;">
 													<?php
-													$today = date('Y-m-d');
-													$cat = $event->query("SELECT * FROM `tbl_event` WHERE status=1 AND sdate >= '$today' ORDER BY sdate ASC");
+													$cat = $event->query("SELECT * FROM `tbl_event` WHERE status=1 ORDER BY id DESC");
 													while ($row = $cat->fetch_assoc()) { ?>
 														<li>
 															<label class="dropdown-item">
@@ -595,7 +590,7 @@ include 'include/sidebar.php';
 									<div class="form-group mb-3">
 										<label>Event Description</label>
 										<textarea class="form-control" rows="5" id="cdesc" name="cdesc"
-											style="resize: none;" required></textarea>
+											style="resize: none;"></textarea>
 									</div>
 								</div>
 
@@ -603,7 +598,7 @@ include 'include/sidebar.php';
 									<div class="form-group mb-3">
 										<label>Event Disclaimer</label>
 										<textarea class="form-control" rows="5" id="disclaimer" name="disclaimer"
-											style="resize: none;" required></textarea>
+											style="resize: none;"></textarea>
 									</div>
 								</div>
 
@@ -671,7 +666,7 @@ include 'include/sidebar.php';
 									<div class="form-group mb-3">
 										<label>Menu Description</label>
 										<textarea class="form-control" rows="5" id="menudesc" name="menudesc"
-											style="resize: none;" required></textarea>
+											style="resize: none;"></textarea>
 									</div>
 								</div>
 
@@ -681,7 +676,7 @@ include 'include/sidebar.php';
 									<div class="form-group mb-3">
 										<label>Term And Condition	</label>
 										<textarea class="form-control" rows="5" id="terms" name="terms"
-											style="resize: none;" required></textarea>
+											style="resize: none;"></textarea>
 									</div>
 								</div>
 
@@ -783,30 +778,6 @@ include 'include/sidebar.php';
 		}
 	};
 </script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-	$(document).ready(function () {
-		$("#venueDropdown").change(function () {
-			var selectedOption = $(this).find(":selected");
-			var address = selectedOption.data("address");
-			var placeName = selectedOption.data("place-name");
-
-			if (selectedOption.val()) {
-				// If a valid option is selected, autofill and make fields uneditable
-				$("input[name='pname']").val(placeName).prop("readonly", true);
-				$("textarea[name='address']").val(address).prop("readonly", true);
-			} else {
-				// If an empty value is selected, clear fields and make them editable
-				$("input[name='pname']").val("").prop("readonly", false);
-				$("textarea[name='address']").val("").prop("readonly", false);
-			}
-		});
-
-
-	});
-</script>
-
-
 <script>
   let headlines = [];
 
@@ -870,6 +841,25 @@ include 'include/sidebar.php';
 
 
 <?php include 'include/footer.php'; ?>
+<script>
+	$(document).ready(function () {
+		$("#venueDropdown").change(function () {
+			var selectedOption = $(this).find(":selected");
+			var address = selectedOption.data("address");
+			var placeName = selectedOption.data("place-name");
+
+			if (selectedOption.val()) {
+				// If a valid option is selected, autofill and make fields uneditable
+				$("input[name='pname']").val(placeName).prop("readonly", true);
+				$("textarea[name='address']").val(address).prop("readonly", true);
+			} else {
+				// If an empty value is selected, clear fields and make them editable
+				$("input[name='pname']").val("").prop("readonly", false);
+				$("textarea[name='address']").val("").prop("readonly", false);
+			}
+		});
+	});
+</script>
 
 <style>
 	.columnDivider {

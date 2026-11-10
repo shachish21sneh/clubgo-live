@@ -42,7 +42,7 @@ include 'include/sidebar.php';
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
                                             <label>Description</label>
-                                            <textarea class="form-control" rows="3" name="vdesc" required><?= htmlspecialchars($venue['loc_description']); ?></textarea>
+                                            <textarea class="form-control" rows="3" name="vdesc"><?= htmlspecialchars($venue['loc_description']); ?></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -58,7 +58,7 @@ include 'include/sidebar.php';
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
                                             <label>Location Customer Headlines</label>
-                                            <textarea class="form-control" rows="3" name="loc_cus_headline" required><?= htmlspecialchars($venue['loc_customer_headlines']); ?></textarea>
+                                            <textarea class="form-control" rows="3" name="loc_cus_headline"><?= htmlspecialchars($venue['loc_customer_headlines']); ?></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -72,7 +72,7 @@ include 'include/sidebar.php';
                                                 <option value="" disabled>Select City</option>
                                                 <?php
                                                 $loc_city_id = $venue['loc_city_id'];
-                                                $cat = $event->query("SELECT * FROM tbl_city WHERE id = " . intval($loc_city_id));
+                                                $cat = $event->query("SELECT * FROM tbl_city");
 
                                                 while ($row = $cat->fetch_assoc()) { ?>
                                                     <option value="<?= $row['id']; ?>" <?= ($row['id'] == $loc_city_id) ? 'selected' : ''; ?>>
@@ -311,7 +311,7 @@ include 'include/sidebar.php';
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
                                             <label>Featured Order</label>
-                                            <input type="number" class="form-control" name="featuredorder" value="<?= $venue['is_featured']; ?>" required>
+                                            <input type="number" class="form-control" name="featuredorder" value="<?= ($venue['is_featured'] !== null && $venue['is_featured'] !== '') ? $venue['is_featured'] : 0; ?>" required>
                                         </div>
                                     </div>
                                 </div>

@@ -53,9 +53,9 @@ $today = date('Y-m-d');
 $event->query("UPDATE tbl_event SET event_status='Completed' WHERE sdate < '$today' AND event_status='Pending'");
 $event->query("UPDATE tbl_event SET event_status='Pending' WHERE sdate >= '$today' AND event_status='Completed'");
 
-// Search & Date filter functionality (show current and future events only)
+// Search functionality
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$where_clauses = ["tbl_event.sdate >= '$today'"];
+$where_clauses = [];
 $search_params = '';
 
 if ($search !== '') {
@@ -69,7 +69,7 @@ if ($search !== '') {
     $search_params = '&search=' . urlencode($search);
 }
 
-$search_condition = 'WHERE ' . implode(' AND ', $where_clauses);
+$search_condition = !empty($where_clauses) ? ('WHERE ' . implode(' AND ', $where_clauses)) : '';
 
 // Pagination settings
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -91,7 +91,7 @@ $main_query = "SELECT tbl_event.*, {$venue_table}.loc_title as venue_name
                FROM tbl_event 
                LEFT JOIN {$venue_table} ON tbl_event.loc_id = {$venue_table}.loc_id 
                $search_condition 
-               ORDER BY tbl_event.sdate ASC, tbl_event.id DESC 
+               ORDER BY tbl_event.id DESC 
                LIMIT " . (int)$records_per_page . " OFFSET " . (int)$offset;
 
 $city = run_query($event, $main_query, $DEBUG);
@@ -224,9 +224,9 @@ $i = $offset;
                                             ?>
                                         </td> -->
                                         <?php if($row['status'] == 1) { ?>
-                                            <td><span class="badge badge-success">Publish</span></td>
+                                            <td><a href="javascript:void(0)" class="badge badge-success drop" data-id="<?php echo $row['id'];?>" data-status="0" data-type="update_status" coll-type="event" title="Click to Unpublish">Publish</a></td>
                                         <?php } else { ?>
-                                            <td><span class="badge badge-danger">Unpublish</span></td>
+                                            <td><a href="javascript:void(0)" class="badge badge-danger drop" data-id="<?php echo $row['id'];?>" data-status="1" data-type="update_status" coll-type="event" title="Click to Publish">Unpublish</a></td>
                                         <?php } ?>
                                         <td><span class="badge badge-success"><?php echo htmlspecialchars($row['event_status']); ?></span></td>
                                         <td>
@@ -236,6 +236,9 @@ $i = $offset;
                                                 </a>
                                                 <a href="list_tickets.php?id=<?php echo $row['id'];?>" class="btn btn-info shadow btn-xs sharp me-1" title="Show Tickets">
                                                     <i class="fa fa-ticket"></i>
+                                                </a>
+                                                <a href="javascript:void(0)" data-id="<?php echo $row['id'];?>" class="btn btn-danger shadow btn-xs sharp del" data-type="event_delete" title="Delete Event">
+                                                    <i class="fa fa-trash"></i>
                                                 </a>
                                             </div>												
                                         </td>												
