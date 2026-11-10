@@ -32,7 +32,7 @@ include 'include/sidebar.php';
 										<div class="form-group mb-3">
 											<label>Event Name</label>
 											<input type="text" class="form-control" name="title"
-												value="<?php echo $data['title']; ?>" placeholder="Enter Event Name"
+												value="<?php echo htmlspecialchars($data['title'] ?? '', ENT_QUOTES); ?>" placeholder="Enter Event Name"
 												required="">
 											<input type="hidden" name="type" value="edit_event" />
 											<input type="hidden" name="id" value="<?php echo $_GET['id']; ?>" />
@@ -124,10 +124,11 @@ include 'include/sidebar.php';
 													$venues = $event->query("SELECT * FROM tbl_veneu"); // Ensure correct table name
 													while ($venue = $venues->fetch_assoc()) {
 														$isSelected = ($venue['loc_id'] == $data["loc_id"]) ? 'selected' : '';
+														$v_addr = !empty(trim($venue['loc_open_close'] ?? '')) ? $venue['loc_open_close'] : $venue['loc_title'];
 														echo '<option value="' . $venue['loc_id'] . '" 
-                                                          data-address="' . $venue['loc_open_close'] . '" 
-                                                            data-place-name="' . $venue['loc_title'] . '" ' . $isSelected . '>' .
-															$venue['loc_title'] . '</option>';
+                                                          data-address="' . htmlspecialchars($v_addr, ENT_QUOTES) . '" 
+                                                            data-place-name="' . htmlspecialchars($venue['loc_title'], ENT_QUOTES) . '" ' . $isSelected . '>' .
+															htmlspecialchars($venue['loc_title']) . '</option>';
 													}
 													?>
 												</select>
@@ -166,7 +167,7 @@ include 'include/sidebar.php';
 										<div class="form-group mb-3">
 											<label class="form-label">Event Place Name</label>
 											<input type="text" class="form-control " name="pname"
-												value="<?php echo $data['place_name']; ?>" placeholder="Enter Place Name"
+												value="<?php echo htmlspecialchars($data['place_name'] ?? '', ENT_QUOTES); ?>" placeholder="Enter Place Name"
 												required="">
 										</div>
 
@@ -479,14 +480,14 @@ include 'include/sidebar.php';
 								<div class="col-md-6 col-lg-6 col-xs-12 col-sm-12">
 									<div class="form-group mb-3">
 										<label class="form-label">Event Latitude</label>
-										<input type="text" class="form-control " name="latitude"
+										<input type="text" class="form-control " name="latitude" value="0.0"
 											placeholder="Enter Latitude" required="">
 									</div>
 								</div>
 								<div class="col-md-6 col-lg-6 col-xs-12 col-sm-12">
 									<div class="form-group mb-3">
 										<label class="form-label">Event Longtitude</label>
-										<input type="text" class="form-control " name="longtitude"
+										<input type="text" class="form-control " name="longtitude" value="0.0"
 											placeholder="Enter Longtitude" required="">
 									</div>
 								</div>
@@ -500,10 +501,11 @@ include 'include/sidebar.php';
 												<?php
 												$venues = $event->query("SELECT * FROM tbl_veneu"); // Ensure correct table name
 												while ($venue = $venues->fetch_assoc()) {
+													$v_addr = !empty(trim($venue['loc_open_close'] ?? '')) ? $venue['loc_open_close'] : $venue['loc_title'];
 													echo '<option value="' . $venue['loc_id'] . '" 
-                                               data-address="' . $venue['loc_open_close'] . '" 
-                                                 data-place-name="' . $venue['loc_title'] . '">' .
-														$venue['loc_title'] . '</option>'; // Make sure to display venue name
+                                               data-address="' . htmlspecialchars($v_addr, ENT_QUOTES) . '" 
+                                                 data-place-name="' . htmlspecialchars($venue['loc_title'], ENT_QUOTES) . '">' .
+														htmlspecialchars($venue['loc_title']) . '</option>'; // Make sure to display venue name
 												}
 												?>
 											</select>
@@ -845,15 +847,13 @@ include 'include/sidebar.php';
 	$(document).ready(function () {
 		$("#venueDropdown").change(function () {
 			var selectedOption = $(this).find(":selected");
-			var address = selectedOption.data("address");
-			var placeName = selectedOption.data("place-name");
+			var placeName = selectedOption.data("place-name") || "";
+			var address = selectedOption.data("address") || placeName;
 
 			if (selectedOption.val()) {
-				// If a valid option is selected, autofill and make fields uneditable
-				$("input[name='pname']").val(placeName).prop("readonly", true);
-				$("textarea[name='address']").val(address).prop("readonly", true);
+				$("input[name='pname']").val(placeName).prop("readonly", false);
+				$("textarea[name='address']").val(address).prop("readonly", false);
 			} else {
-				// If an empty value is selected, clear fields and make them editable
 				$("input[name='pname']").val("").prop("readonly", false);
 				$("textarea[name='address']").val("").prop("readonly", false);
 			}

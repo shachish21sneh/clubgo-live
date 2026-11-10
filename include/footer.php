@@ -39,13 +39,57 @@ window.postForm = function() {
     }
     return true;
 };
-$(document).ready(function() {
+
+function notifyAdmin(type, title, message) {
+    try {
+        var opts = {
+            timeOut: 3000,
+            closeButton: true,
+            debug: false,
+            newestOnTop: true,
+            progressBar: true,
+            positionClass: 'toast-top-right',
+            preventDuplicates: true,
+            showDuration: '300',
+            hideDuration: '1000',
+            extendedTimeOut: '1000',
+            showEasing: 'swing',
+            hideEasing: 'linear',
+            showMethod: 'fadeIn',
+            hideMethod: 'fadeOut'
+        };
+        if (window.toastr) {
+            if (type === 'success' && toastr.success) {
+                toastr.success(message || '', title || 'Success', opts);
+                return;
+            } else if (toastr.error) {
+                toastr.error(message || 'Operation failed', title || 'Error', opts);
+                return;
+            }
+        }
+        if (window.iziToast) {
+            if (type === 'success') {
+                iziToast.success({ title: title || 'Success', message: message || '', position: 'topRight' });
+            } else {
+                iziToast.error({ title: title || 'Error', message: message || 'Operation failed', position: 'topRight' });
+            }
+            return;
+        }
+    } catch (e) {}
+    if (type !== 'success') {
+        alert((title || 'Error') + ': ' + (message || 'Operation failed'));
+    }
+}
+
+function bindAdminHandlers() {
+    if (!window.jQuery) return;
     $(document).off('submit', 'form').on('submit', 'form', function(e) {
         var method = ($(this).attr('method') || '').toLowerCase();
         if (method === 'get') {
             return true;
         }
         e.preventDefault();
+        e.stopImmediatePropagation();
         var $form = $(this);
         var $submitBtns = $form.find(':input[type="submit"]');
         $submitBtns.prop('disabled', true);
@@ -82,44 +126,33 @@ $(document).ready(function() {
             cache: false,
             processData: false,
             success: function(data) {
+                var res = null;
                 try {
-                    var res = (typeof data === 'object') ? data : JSON.parse(data);
-                    if (res.Result === 'true') {
-                        iziToast.success({
-                            title: res.title || 'Success',
-                            message: res.message || '',
-                            position: 'topRight'
-                        });
-                        setTimeout(function() {
-                            window.location.href = res.action || window.location.href;
-                        }, 1500);
-                    } else {
-                        $submitBtns.prop('disabled', false);
-                        iziToast.error({
-                            title: res.title || 'Error',
-                            message: res.message || 'Operation failed',
-                            position: 'topRight'
-                        });
-                    }
+                    res = (typeof data === 'object') ? data : JSON.parse(data);
                 } catch (err) {
                     $submitBtns.prop('disabled', false);
-                    iziToast.error({
-                        title: 'Error!',
-                        message: 'Unexpected server response. Please try again.',
-                        position: 'topRight'
-                    });
+                    notifyAdmin('error', 'Error!', 'Unexpected server response. Please try again.');
+                    return;
+                }
+                if (res && res.Result === 'true') {
+                    notifyAdmin('success', res.title || 'Success', res.message || '');
+                    setTimeout(function() {
+                        window.location.href = res.action || window.location.href;
+                    }, 1000);
+                } else {
+                    $submitBtns.prop('disabled', false);
+                    notifyAdmin('error', (res && res.title) || 'Error', (res && res.message) || 'Operation failed');
                 }
             },
             error: function(xhr) {
                 $submitBtns.prop('disabled', false);
-                iziToast.error({
-                    title: 'Request Failed (' + xhr.status + ')',
-                    message: 'Could not save changes. Please check your input and try again.',
-                    position: 'topRight'
-                });
+                notifyAdmin('error', 'Request Failed (' + xhr.status + ')', 'Could not save changes. Please check your input and try again.');
             }
         });
         return false;
     });
-});
+}
+
+bindAdminHandlers();
+$(document).ready(bindAdminHandlers);
 </script>
